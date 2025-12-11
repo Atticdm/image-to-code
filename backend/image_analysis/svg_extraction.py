@@ -1,5 +1,5 @@
 """
-SVG extraction using Gemini 3 Pro Image.
+SVG extraction using Gemini 1.5 Flash.
 Extracts design elements from original image and saves them as SVG.
 """
 import base64
@@ -9,7 +9,7 @@ from google import genai
 from google.genai import types
 
 
-GEMINI_3_PRO_IMAGE_MODEL = "gemini-3.0-pro-nano"  # Using Gemini 3 Pro Nano for image processing
+GEMINI_IMAGE_MODEL = "gemini-1.5-flash"  # Using Gemini 1.5 Flash for image processing
 
 
 async def extract_elements_as_svg(
@@ -18,7 +18,7 @@ async def extract_elements_as_svg(
     gemini_api_key: str,
 ) -> Dict[str, str]:
     """
-    Extract each design element from original image as SVG using Gemini 3 Pro Image.
+    Extract each design element from original image as SVG using Gemini 1.5 Flash.
     
     Args:
         original_image_data_url: Base64 data URL of original image
@@ -74,9 +74,9 @@ Return format:
 """
     
     try:
-        # Use Gemini 3 Pro Image to extract elements
+        # Use Gemini 1.5 Flash to extract elements
         response = await client.aio.models.generate_content(
-            model=GEMINI_3_PRO_IMAGE_MODEL,
+            model=GEMINI_IMAGE_MODEL,
             contents=[
                 {
                     "parts": [

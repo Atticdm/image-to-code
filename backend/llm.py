@@ -24,8 +24,8 @@ class Llm(Enum):
     GEMINI_2_0_FLASH = "gemini-2.0-flash"
     GEMINI_2_0_PRO_EXP = "gemini-2.0-pro-exp-02-05"
     GEMINI_2_5_FLASH_PREVIEW_05_20 = "gemini-2.5-flash-preview-05-20"
-    GEMINI_3_PRO = "gemini-3.0-pro"
-    GEMINI_3_PRO_NANO = "gemini-3.0-pro-nano"
+    GEMINI_1_5_PRO = "gemini-1.5-pro"
+    GEMINI_1_5_FLASH = "gemini-1.5-flash"
     GPT_5 = "gpt-5"
     GPT_5_TURBO = "gpt-5-turbo"
     O1_2024_12_17 = "o1-2024-12-17"
@@ -68,8 +68,8 @@ MODEL_PROVIDER: dict[Llm, str] = {
     Llm.GEMINI_2_0_FLASH: "gemini",
     Llm.GEMINI_2_0_PRO_EXP: "gemini",
     Llm.GEMINI_2_5_FLASH_PREVIEW_05_20: "gemini",
-    Llm.GEMINI_3_PRO: "gemini",
-    Llm.GEMINI_3_PRO_NANO: "gemini",
+    Llm.GEMINI_1_5_PRO: "gemini",
+    Llm.GEMINI_1_5_FLASH: "gemini",
     # GPT-5 models
     Llm.GPT_5: "openai",
     Llm.GPT_5_TURBO: "openai",

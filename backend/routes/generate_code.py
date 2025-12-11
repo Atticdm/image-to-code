@@ -385,17 +385,17 @@ class ModelSelectionStage:
         anthropic_api_key: str | None,
         gemini_api_key: str | None,
     ) -> List[Llm]:
-        """Model selection using ONLY newest models: GPT-5, Claude Opus 4.5, Gemini 3 Pro"""
+        """Model selection using best available models"""
 
-        # FORCE newest models only
-        gpt_model = Llm.GPT_5
-        claude_model = Llm.CLAUDE_4_5_OPUS_2025_09_29
-        gemini_model = Llm.GEMINI_3_PRO
+        # Use real, available models
+        gpt_model = Llm.GPT_4O_2024_11_20
+        claude_model = Llm.CLAUDE_3_OPUS
+        gemini_model = Llm.GEMINI_1_5_PRO
 
         # Build list of available models based on API keys
         available_models: List[Llm] = []
         
-        # Priority order: GPT-5 -> Claude Opus 4.5 -> Gemini 3 Pro
+        # Priority order: GPT-4o -> Claude Opus -> Gemini 1.5 Pro
         if openai_api_key:
             available_models.append(gpt_model)
         
@@ -848,30 +848,24 @@ class ParallelGenerationStage:
         if not self.should_generate_images:
             return completion
 
-        # Priority: Gemini 3 Pro Nano > Flux > DALL-E 3
+        # Priority: Flux > DALL-E 3
         replicate_api_key = REPLICATE_API_KEY
         
-        if self.gemini_api_key:
-            # Use Gemini 3 Pro Nano for image generation (best quality)
-            image_generation_model = "gemini-3-pro-nano"
-            api_key = self.gemini_api_key
-            gemini_key = self.gemini_api_key
-        elif replicate_api_key:
-            # Fallback to Flux Schnell
+        if replicate_api_key:
+            # Use Flux Schnell
             image_generation_model = "flux"
             api_key = replicate_api_key
             gemini_key = None
-        else:
-            if not self.openai_api_key:
-                print(
-                    "No Gemini, OpenAI, or Replicate API key found. Skipping image generation."
-                )
-                return completion
+        elif self.openai_api_key:
             # Fallback to DALL-E 3
             image_generation_model = "dalle3"
             api_key = self.openai_api_key
             gemini_key = None
-            gemini_key = None
+        else:
+            print(
+                "No OpenAI or Replicate API key found. Skipping image generation."
+            )
+            return completion
 
         print("Generating images with model: ", image_generation_model)
 
