@@ -1,6 +1,8 @@
 FROM python:3.12.3-slim-bullseye
 
-ENV POETRY_VERSION 1.8.0
+ENV POETRY_VERSION=1.8.0
+# Suppress SyntaxWarnings from moviepy library (known issue in moviepy 1.0.3)
+ENV PYTHONWARNINGS=ignore::SyntaxWarning
 
 # Install system dependencies
 RUN pip install "poetry==$POETRY_VERSION"
