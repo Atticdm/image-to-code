@@ -68,11 +68,11 @@ const StartPane: React.FC<Props> = ({ doCreate, importFromCode, settings, setSet
                 <span className="ml-2 text-xs text-zinc-500">(element extraction)</span>
               </Label>
               <Select
-                value={settings.analysisModel || ""}
+                value={settings.analysisModel || "none"}
                 onValueChange={(value) =>
                   setSettings((s) => ({
                     ...s,
-                    analysisModel: value ? (value as CodeGenerationModel) : null,
+                    analysisModel: value && value !== "none" ? (value as CodeGenerationModel) : null,
                   }))
                 }
               >
@@ -82,7 +82,7 @@ const StartPane: React.FC<Props> = ({ doCreate, importFromCode, settings, setSet
                     : "Standard (no extraction)"}
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Standard (no extraction)</SelectItem>
+                  <SelectItem value="none">Standard (no extraction)</SelectItem>
                   {Object.values(CodeGenerationModel).map((model) => (
                     <SelectItem key={model} value={model}>
                       {CODE_GENERATION_MODEL_DESCRIPTIONS[model].name}
