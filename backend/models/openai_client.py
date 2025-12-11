@@ -27,11 +27,11 @@ async def stream_openai_response(
         params["temperature"] = 0
         params["stream"] = True
 
-    # GPT-5 series
+    # GPT-5 series - uses max_completion_tokens instead of max_tokens
     if model_name in ["gpt-5", "gpt-5-turbo"]:
         params["temperature"] = 0
         params["stream"] = True
-        params["max_tokens"] = 32768
+        params["max_completion_tokens"] = 32768
     
     # 4.1 series
     if model_name in [

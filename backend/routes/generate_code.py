@@ -389,7 +389,7 @@ class ModelSelectionStage:
 
         # FORCE newest models only
         gpt_model = Llm.GPT_5
-        claude_model = Llm.CLAUDE_4_5_OPUS_2025_09_29
+        claude_model = Llm.CLAUDE_4_5_OPUS_2025_11_01
         gemini_model = Llm.GEMINI_3_PRO
 
         # Build list of available models based on API keys

@@ -17,9 +17,9 @@ class Llm(Enum):
     CLAUDE_3_HAIKU = "claude-3-haiku-20240307"
     CLAUDE_3_7_SONNET_2025_02_19 = "claude-3-7-sonnet-20250219"
     CLAUDE_4_SONNET_2025_05_14 = "claude-sonnet-4-20250514"
-    CLAUDE_4_5_SONNET_2025_09_29 = "claude-sonnet-4-5-20250929"
+    CLAUDE_4_5_SONNET_2025_11_01 = "claude-sonnet-4-5-20251101"
     CLAUDE_4_OPUS_2025_05_14 = "claude-opus-4-20250514"
-    CLAUDE_4_5_OPUS_2025_09_29 = "claude-opus-4-5-20250929"
+    CLAUDE_4_5_OPUS_2025_11_01 = "claude-opus-4-5-20251101"
     GEMINI_2_0_FLASH_EXP = "gemini-2.0-flash-exp"
     GEMINI_2_0_FLASH = "gemini-2.0-flash"
     GEMINI_2_0_PRO_EXP = "gemini-2.0-pro-exp-02-05"
@@ -60,9 +60,9 @@ MODEL_PROVIDER: dict[Llm, str] = {
     Llm.CLAUDE_3_HAIKU: "anthropic",
     Llm.CLAUDE_3_7_SONNET_2025_02_19: "anthropic",
     Llm.CLAUDE_4_SONNET_2025_05_14: "anthropic",
-    Llm.CLAUDE_4_5_SONNET_2025_09_29: "anthropic",
+    Llm.CLAUDE_4_5_SONNET_2025_11_01: "anthropic",
     Llm.CLAUDE_4_OPUS_2025_05_14: "anthropic",
-    Llm.CLAUDE_4_5_OPUS_2025_09_29: "anthropic",
+    Llm.CLAUDE_4_5_OPUS_2025_11_01: "anthropic",
     # Gemini models
     Llm.GEMINI_2_0_FLASH_EXP: "gemini",
     Llm.GEMINI_2_0_FLASH: "gemini",
