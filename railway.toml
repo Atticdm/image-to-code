@@ -4,6 +4,8 @@ dockerfilePath = "backend/Dockerfile"
 rootDirectory = "backend"
 
 [deploy]
-startCommand = "poetry run uvicorn main:app --host 0.0.0.0 --port $PORT"
+# Railway automatically sets PORT env variable
+# Use shell to substitute PORT, fallback to 7001 if not set
+startCommand = "sh -c 'poetry run uvicorn main:app --host 0.0.0.0 --port ${PORT:-7001}'"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
