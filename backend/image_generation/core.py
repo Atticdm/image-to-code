@@ -91,7 +91,7 @@ async def generate_image_gemini(prompt: str, api_key: str) -> str:
         # TODO: Update this when official Gemini 3 Pro Nano image generation API is available
         # Expected API: Use Imagen API through Gemini client
         response = await client.aio.models.generate_content(
-            model="gemini-3.0-pro-nano",
+            model="gemini-3-pro-nano-preview",
             contents=[{"parts": [{"text": f"Generate an image: {prompt}"}]}],
         )
         

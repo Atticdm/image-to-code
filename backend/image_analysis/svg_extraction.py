@@ -9,7 +9,7 @@ from google import genai
 from google.genai import types
 
 
-GEMINI_3_PRO_IMAGE_MODEL = "gemini-3.0-pro-nano"  # Using Gemini 3 Pro Nano for image processing
+GEMINI_3_PRO_IMAGE_MODEL = "gemini-3-pro-nano-preview"  # Using Gemini 3 Pro Nano for image processing
 
 
 async def extract_elements_as_svg(
