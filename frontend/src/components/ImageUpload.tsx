@@ -1,43 +1,12 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "react-hot-toast";
 import { URLS } from "../urls";
 import ScreenRecorder from "./recording/ScreenRecorder";
 import { ScreenRecorderState } from "../types";
+import { UploadIcon, VideoIcon } from "@radix-ui/react-icons";
 
-const baseStyle = {
-  flex: 1,
-  width: "80%",
-  margin: "0 auto",
-  minHeight: "400px",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "20px",
-  borderWidth: 2,
-  borderRadius: 2,
-  borderColor: "#eeeeee",
-  borderStyle: "dashed",
-  backgroundColor: "#fafafa",
-  color: "#bdbdbd",
-  outline: "none",
-  transition: "border .24s ease-in-out",
-};
-
-const focusedStyle = {
-  borderColor: "#2196f3",
-};
-
-const acceptStyle = {
-  borderColor: "#00e676",
-};
-
-const rejectStyle = {
-  borderColor: "#ff1744",
-};
-
-// TODO: Move to a separate file
+// Helper function to convert file to data URL
 function fileToDataURL(file: File) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -60,26 +29,22 @@ interface Props {
 
 function ImageUpload({ setReferenceImages }: Props) {
   const [files, setFiles] = useState<FileWithPreview[]>([]);
-  // TODO: Switch to Zustand
   const [screenRecorderState, setScreenRecorderState] =
     useState<ScreenRecorderState>(ScreenRecorderState.INITIAL);
 
-  const { getRootProps, getInputProps, isFocused, isDragAccept, isDragReject } =
+  const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } =
     useDropzone({
       maxFiles: 1,
       maxSize: 1024 * 1024 * 20, // 20 MB
       accept: {
-        // Image formats
         "image/png": [".png"],
         "image/jpeg": [".jpeg"],
         "image/jpg": [".jpg"],
-        // Video formats
         "video/quicktime": [".mov"],
         "video/mp4": [".mp4"],
         "video/webm": [".webm"],
       },
       onDrop: (acceptedFiles) => {
-        // Set up the preview thumbnail images
         setFiles(
           acceptedFiles.map((file: File) =>
             Object.assign(file, {
@@ -88,7 +53,6 @@ function ImageUpload({ setReferenceImages }: Props) {
           ) as FileWithPreview[]
         );
 
-        // Convert images to data URLs and set the prompt images state
         Promise.all(acceptedFiles.map((file) => fileToDataURL(file)))
           .then((dataUrls) => {
             if (dataUrls.length > 0) {
@@ -110,85 +74,81 @@ function ImageUpload({ setReferenceImages }: Props) {
       },
     });
 
-  // const pasteEvent = useCallback(
-  //   (event: ClipboardEvent) => {
-  //     const clipboardData = event.clipboardData;
-  //     if (!clipboardData) return;
-
-  //     const items = clipboardData.items;
-  //     const files = [];
-  //     for (let i = 0; i < items.length; i++) {
-  //       const file = items[i].getAsFile();
-  //       if (file && file.type.startsWith("image/")) {
-  //         files.push(file);
-  //       }
-  //     }
-
-  //     // Convert images to data URLs and set the prompt images state
-  //     Promise.all(files.map((file) => fileToDataURL(file)))
-  //       .then((dataUrls) => {
-  //         if (dataUrls.length > 0) {
-  //           setReferenceImages(dataUrls.map((dataUrl) => dataUrl as string));
-  //         }
-  //       })
-  //       .catch((error) => {
-  //         // TODO: Display error to user
-  //         console.error("Error reading files:", error);
-  //       });
-  //   },
-  //   [setReferenceImages]
-  // );
-
-  // TODO: Make sure we don't listen to paste events in text input components
-  // useEffect(() => {
-  //   window.addEventListener("paste", pasteEvent);
-  // }, [pasteEvent]);
-
   useEffect(() => {
     return () => files.forEach((file) => URL.revokeObjectURL(file.preview));
-  }, [files]); // Added files as a dependency
-
-  const style = useMemo(
-    () => ({
-      ...baseStyle,
-      ...(isFocused ? focusedStyle : {}),
-      ...(isDragAccept ? acceptStyle : {}),
-      ...(isDragReject ? rejectStyle : {}),
-    }),
-    [isFocused, isDragAccept, isDragReject]
-  );
+  }, [files]);
 
   return (
-    <section className="container">
+    <div className="w-full">
       {screenRecorderState === ScreenRecorderState.INITIAL && (
-        /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-        <div {...getRootProps({ style: style as any })}>
-          <input {...getInputProps()} className="file-input" />
-          <p className="text-slate-700 text-lg">
-            Drag & drop a screenshot here, <br />
-            or click to upload
-          </p>
+        <div
+          {...getRootProps()}
+          className={`
+            group relative flex flex-col items-center justify-center w-full min-h-[300px] 
+            border-2 border-dashed rounded-xl transition-all duration-300 ease-in-out cursor-pointer
+            ${isDragActive ? "scale-[0.99]" : "hover:bg-zinc-800/50"}
+            ${
+              isDragAccept
+                ? "border-green-500 bg-green-500/10"
+                : isDragReject
+                ? "border-red-500 bg-red-500/10"
+                : "border-zinc-700 hover:border-zinc-500 bg-zinc-900/30"
+            }
+          `}
+        >
+          <input {...getInputProps()} className="hidden" />
+          
+          <div className="flex flex-col items-center gap-4 p-8 text-center transition-transform duration-300 group-hover:-translate-y-1">
+            <div className={`
+              p-4 rounded-full bg-zinc-800 ring-1 ring-zinc-700 shadow-xl
+              group-hover:ring-zinc-600 group-hover:bg-zinc-700 transition-all duration-300
+            `}>
+              <UploadIcon className="w-8 h-8 text-zinc-400 group-hover:text-white" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-xl font-medium text-white">
+                Upload a screenshot or design
+              </h3>
+              <p className="text-sm text-zinc-400 max-w-xs mx-auto">
+                Drag & drop or click to browse. Supports PNG, JPG, MP4, MOV.
+              </p>
+            </div>
+          </div>
+
+          {/* Video Recording Option Link */}
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+             <div className="flex items-center gap-2 text-xs text-zinc-500 bg-zinc-950/80 px-3 py-1.5 rounded-full border border-zinc-800">
+                <VideoIcon className="w-3 h-3" />
+                <span>Supports Video Recording</span>
+             </div>
+          </div>
         </div>
       )}
+
       {screenRecorderState === ScreenRecorderState.INITIAL && (
-        <div className="text-center text-sm text-slate-800 mt-4">
-          Upload a screen recording (.mp4, .mov) or record your screen to clone
-          a whole app (experimental).{" "}
-          <a
-            className="underline"
-            href={URLS["intro-to-video"]}
-            target="_blank"
-          >
-            Learn more.
-          </a>
+        <div className="flex justify-center mt-4">
+           <button 
+             onClick={(e) => {
+               e.stopPropagation();
+               // Link to learn more logic could go here, or trigger recording directly
+             }}
+             className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1"
+           >
+             <a href={URLS["intro-to-video"]} target="_blank" rel="noreferrer" className="flex items-center gap-1">
+               <span>Need to clone a full app flow? Try screen recording</span>
+               <span className="bg-blue-600/10 text-blue-500 px-1.5 py-0.5 rounded text-[10px] font-bold">BETA</span>
+             </a>
+           </button>
         </div>
       )}
+
       <ScreenRecorder
         screenRecorderState={screenRecorderState}
         setScreenRecorderState={setScreenRecorderState}
         generateCode={setReferenceImages}
       />
-    </section>
+    </div>
   );
 }
 

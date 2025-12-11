@@ -13,16 +13,16 @@ import toast from "react-hot-toast";
 import { Stack } from "./lib/stacks";
 import { CodeGenerationModel } from "./lib/models";
 import useBrowserTabIndicator from "./hooks/useBrowserTabIndicator";
-// import TipLink from "./components/messages/TipLink";
 import { useAppStore } from "./store/app-store";
 import { useProjectStore } from "./store/project-store";
 import Sidebar from "./components/sidebar/Sidebar";
 import PreviewPane from "./components/preview/PreviewPane";
-import { GenerationSettings } from "./components/settings/GenerationSettings";
 import StartPane from "./components/start-pane/StartPane";
 import { Commit } from "./components/commits/types";
 import { createCommit } from "./components/commits/utils";
 import GenerateFromText from "./components/generate-from-text/GenerateFromText";
+import { GearIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
+import { Button } from "./components/ui/button";
 
 function App() {
   const {
@@ -73,7 +73,6 @@ function App() {
       editorTheme: EditorTheme.COBALT,
       generatedCodeConfig: Stack.HTML_TAILWIND,
       codeGenerationModel: CodeGenerationModel.CLAUDE_4_5_SONNET_2025_09_29,
-      // Only relevant for hosted version
       isTermOfServiceAccepted: false,
     },
     "setting"
@@ -85,12 +84,8 @@ function App() {
     settings.generatedCodeConfig === Stack.HTML_TAILWIND ||
     settings.generatedCodeConfig === Stack.HTML_CSS;
 
-  // Indicate coding state using the browser tab's favicon and title
   useBrowserTabIndicator(appState === AppState.CODING);
 
-  // When the user already has the settings in local storage, newly added keys
-  // do not get added to the settings so if it's falsy, we populate it with the default
-  // value
   useEffect(() => {
     if (!settings.generatedCodeConfig) {
       setSettings((prev) => ({
@@ -100,18 +95,14 @@ function App() {
     }
   }, [settings.generatedCodeConfig, setSettings]);
 
-  // Functions
   const reset = () => {
     setAppState(AppState.INITIAL);
     setUpdateInstruction("");
     setUpdateImages([]);
     disableInSelectAndEditMode();
     resetExecutionConsoles();
-
     resetCommits();
     resetHead();
-
-    // Inputs
     setInputMode("image");
     setReferenceImages([]);
     setIsImportedFromCode(false);
@@ -119,72 +110,47 @@ function App() {
 
   const regenerate = () => {
     if (head === null) {
-      toast.error(
-        "No current version set. Please contact support via chat or Github."
-      );
+      toast.error("No current version set. Please contact support.");
       throw new Error("Regenerate called with no head");
     }
-
-    // Retrieve the previous command
     const currentCommit = commits[head];
     if (currentCommit.type !== "ai_create") {
       toast.error("Only the first version can be regenerated.");
       return;
     }
-
-    // Re-run the create
     if (inputMode === "image" || inputMode === "video") {
       doCreate(referenceImages, inputMode);
     } else {
-      // TODO: Fix this
       doCreateFromText(initialPrompt);
     }
   };
 
-  // Used when the user cancels the code generation
   const cancelCodeGeneration = () => {
     wsRef.current?.close?.(USER_CLOSE_WEB_SOCKET_CODE);
   };
 
-  // Used for code generation failure as well
   const cancelCodeGenerationAndReset = (commit: Commit) => {
-    // When the current commit is the first version, reset the entire app state
     if (commit.type === "ai_create") {
       reset();
     } else {
-      // Otherwise, remove current commit from commits
       removeCommit(commit.hash);
-
-      // Revert to parent commit
       const parentCommitHash = commit.parentHash;
       if (parentCommitHash) {
         setHead(parentCommitHash);
       } else {
         throw new Error("Parent commit not found");
       }
-
       setAppState(AppState.CODE_READY);
     }
   };
 
   function doGenerateCode(params: CodeGenerationParams) {
-    // Reset the execution console
     resetExecutionConsoles();
-
-    // Set the app state to coding during generation
     setAppState(AppState.CODING);
-
-    // Merge settings with params
     const updatedParams = { ...params, ...settings };
-
-    // Create variants dynamically - start with 4 to handle most cases
-    // Backend will use however many it needs (typically 3)
     const baseCommitObject = {
-      variants: Array(4)
-        .fill(null)
-        .map(() => ({ code: "" })),
+      variants: Array(4).fill(null).map(() => ({ code: "" })),
     };
-
     const commitInputObject =
       params.generationType === "create"
         ? {
@@ -202,7 +168,6 @@ function App() {
               : { text: "", images: [] },
           };
 
-    // Create a new commit and set it as the head
     const commit = createCommit(commitInputObject);
     addCommit(commit);
     setHead(commit.hash);
@@ -217,15 +182,12 @@ function App() {
       onStatusUpdate: (line, variantIndex) =>
         appendExecutionConsole(variantIndex, line),
       onVariantComplete: (variantIndex) => {
-        console.log(`Variant ${variantIndex} complete event received`);
         updateVariantStatus(commit.hash, variantIndex, "complete");
       },
       onVariantError: (variantIndex, error) => {
-        console.error(`Error in variant ${variantIndex}:`, error);
         updateVariantStatus(commit.hash, variantIndex, "error", error);
       },
       onVariantCount: (count) => {
-        console.log(`Backend is using ${count} variants`);
         resizeVariants(commit.hash, count);
       },
       onCancel: () => {
@@ -237,16 +199,10 @@ function App() {
     });
   }
 
-  // Initial version creation
   function doCreate(referenceImages: string[], inputMode: "image" | "video") {
-    // Reset any existing state
     reset();
-
-    // Set the input states
     setReferenceImages(referenceImages);
     setInputMode(inputMode);
-
-    // Kick off the code generation
     if (referenceImages.length > 0) {
       doGenerateCode({
         generationType: "create",
@@ -257,9 +213,7 @@ function App() {
   }
 
   function doCreateFromText(text: string) {
-    // Reset any existing state
     reset();
-
     setInputMode("text");
     setInitialPrompt(text);
     doGenerateCode({
@@ -269,36 +223,21 @@ function App() {
     });
   }
 
-  // Subsequent updates
-  async function doUpdate(
-    updateInstruction: string,
-    selectedElement?: HTMLElement
-  ) {
+  async function doUpdate(updateInstruction: string, selectedElement?: HTMLElement) {
     if (updateInstruction.trim() === "") {
       toast.error("Please include some instructions for AI on what to update.");
       return;
     }
-
-    if (head === null) {
-      toast.error(
-        "No current version set. Contact support or open a Github issue."
-      );
-      throw new Error("Update called with no head");
-    }
+    if (head === null) throw new Error("Update called with no head");
 
     let historyTree;
     try {
       historyTree = extractHistory(head, commits);
     } catch {
-      toast.error(
-        "Version history is invalid. This shouldn't happen. Please contact support or open a Github issue."
-      );
       throw new Error("Invalid version history");
     }
 
     let modifiedUpdateInstruction = updateInstruction;
-
-    // Send in a reference to the selected element if it exists
     if (selectedElement) {
       modifiedUpdateInstruction =
         updateInstruction +
@@ -327,30 +266,17 @@ function App() {
   }
 
   const handleTermDialogOpenChange = (open: boolean) => {
-    setSettings((s) => ({
-      ...s,
-      isTermOfServiceAccepted: !open,
-    }));
+    setSettings((s) => ({ ...s, isTermOfServiceAccepted: !open }));
   };
 
   function setStack(stack: Stack) {
-    setSettings((prev) => ({
-      ...prev,
-      generatedCodeConfig: stack,
-    }));
+    setSettings((prev) => ({ ...prev, generatedCodeConfig: stack }));
   }
 
   function importFromCode(code: string, stack: Stack) {
-    // Reset any existing state
     reset();
-
-    // Set input state
     setIsImportedFromCode(true);
-
-    // Set up this project
     setStack(stack);
-
-    // Create a new commit and set it as the head
     const commit = createCommit({
       type: "code_create",
       parentHash: null,
@@ -359,13 +285,11 @@ function App() {
     });
     addCommit(commit);
     setHead(commit.hash);
-
-    // Set the app state
     setAppState(AppState.CODE_READY);
   }
 
   return (
-    <div className="mt-2 dark:bg-black dark:text-white">
+    <div className="flex flex-col h-screen bg-zinc-950 text-white font-sans selection:bg-blue-500/30">
       {IS_RUNNING_ON_CLOUD && <PicoBadge />}
       {IS_RUNNING_ON_CLOUD && (
         <TermsOfServiceDialog
@@ -373,52 +297,63 @@ function App() {
           onOpenChange={handleTermDialogOpenChange}
         />
       )}
-      <div className="lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-96 lg:flex-col">
-        <div className="flex grow flex-col gap-y-2 overflow-y-auto border-r border-gray-200 bg-white px-6 dark:bg-zinc-950 dark:text-white">
-          {/* Header with access to settings */}
-          <div className="flex items-center justify-between mt-10 mb-2">
-            <h1 className="text-2xl ">Screenshot to Code</h1>
-            <SettingsDialog settings={settings} setSettings={setSettings} />
-          </div>
 
-          {/* Generation settings like stack and model */}
-          <GenerationSettings settings={settings} setSettings={setSettings} />
-
-          {/* Show tip link until coding is complete */}
-          {/* {appState !== AppState.CODE_READY && <TipLink />} */}
-
-          {IS_RUNNING_ON_CLOUD && !settings.openAiApiKey && <OnboardingNote />}
-
-          {appState === AppState.INITIAL && (
-            <GenerateFromText doCreateFromText={doCreateFromText} />
-          )}
-
-          {/* Rest of the sidebar when we're not in the initial state */}
-          {(appState === AppState.CODING ||
-            appState === AppState.CODE_READY) && (
-            <Sidebar
-              showSelectAndEditFeature={showSelectAndEditFeature}
-              doUpdate={doUpdate}
-              regenerate={regenerate}
-              cancelCodeGeneration={cancelCodeGeneration}
-            />
-          )}
+      {/* Modern Header */}
+      <header className="flex items-center justify-between px-6 py-3 border-b border-zinc-800 bg-zinc-950 z-50">
+        <div className="flex items-center gap-2">
+          <button onClick={reset} className="font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
+            Image to Code
+          </button>
         </div>
+        
+        <div className="flex items-center gap-4">
+          <a
+            href="https://github.com/Atticdm/image-to-code"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-zinc-400 hover:text-white transition-colors"
+          >
+            <GitHubLogoIcon className="w-5 h-5" />
+          </a>
+          <SettingsDialog settings={settings} setSettings={setSettings} />
+        </div>
+      </header>
+
+      {/* Main Layout Area */}
+      <div className="flex-1 overflow-hidden relative">
+        {appState === AppState.INITIAL ? (
+          /* Initial State - Centered Content */
+          <div className="h-full overflow-y-auto">
+            <StartPane
+              doCreate={doCreate}
+              importFromCode={importFromCode}
+              settings={settings}
+            />
+          </div>
+        ) : (
+          /* Coding State - Split View */
+          <div className="flex h-full">
+            {/* Left Sidebar - History & Chat */}
+            <aside className="w-[400px] flex flex-col border-r border-zinc-800 bg-zinc-900/50 backdrop-blur-sm z-40 transition-all duration-300 ease-in-out">
+              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                {IS_RUNNING_ON_CLOUD && !settings.openAiApiKey && <OnboardingNote />}
+                
+                <Sidebar
+                  showSelectAndEditFeature={showSelectAndEditFeature}
+                  doUpdate={doUpdate}
+                  regenerate={regenerate}
+                  cancelCodeGeneration={cancelCodeGeneration}
+                />
+              </div>
+            </aside>
+
+            {/* Right Panel - Preview & Code */}
+            <main className="flex-1 relative bg-zinc-950 overflow-hidden">
+               <PreviewPane doUpdate={doUpdate} reset={reset} settings={settings} />
+            </main>
+          </div>
+        )}
       </div>
-
-      <main className="py-2 lg:pl-96">
-        {appState === AppState.INITIAL && (
-          <StartPane
-            doCreate={doCreate}
-            importFromCode={importFromCode}
-            settings={settings}
-          />
-        )}
-
-        {(appState === AppState.CODING || appState === AppState.CODE_READY) && (
-          <PreviewPane doUpdate={doUpdate} reset={reset} settings={settings} />
-        )}
-      </main>
     </div>
   );
 }
