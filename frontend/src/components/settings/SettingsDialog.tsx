@@ -137,7 +137,7 @@ function SettingsDialog({ settings, setSettings }: Props) {
             <Label htmlFor="gemini-api-key">
               <div>Gemini API key</div>
               <div className="font-light mt-1 text-xs leading-relaxed">
-                Required for element extraction with Gemini models.
+                Required for element extraction and Gemini 3 Pro image generation.
               </div>
             </Label>
 
