@@ -22,14 +22,21 @@ async def stream_openai_response(
         "timeout": 600,
     }
 
-    # O1 doesn't support streaming or temperature
-    if model_name not in ["o1-2024-12-17", "o4-mini-2025-04-16", "o3-2025-04-16"]:
-        params["temperature"] = 0
+    # O1 doesn't support streaming or temperature.
+    # GPT-5 only supports the default temperature (1).
+    if model_name not in [
+        "o1-2024-12-17",
+        "o4-mini-2025-04-16",
+        "o3-2025-04-16",
+    ]:
         params["stream"] = True
+        if model_name in ["gpt-5", "gpt-5-turbo"]:
+            params["temperature"] = 1
+        else:
+            params["temperature"] = 0
 
     # GPT-5 series - uses max_completion_tokens instead of max_tokens
     if model_name in ["gpt-5", "gpt-5-turbo"]:
-        params["temperature"] = 0
         params["stream"] = True
         params["max_completion_tokens"] = 32768
     
