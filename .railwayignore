@@ -1,0 +1,27 @@
+# Railway ignore file
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.env
+.env.local
+*.log
+.git/
+.gitignore
+.DS_Store
+*.md
+!README.md
+.vscode/
+.idea/
+coverage/
+dist/
+build/
+*.test.js
+*.test.ts
+*.test.tsx
+

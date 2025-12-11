@@ -19,3 +19,9 @@ RUN poetry install
 
 # Copy the current directory contents into the container at /app
 COPY ./ /app/
+
+# Expose port (Railway will set PORT env variable)
+EXPOSE ${PORT:-7001}
+
+# Start command (Railway provides PORT env variable)
+CMD poetry run uvicorn main:app --host 0.0.0.0 --port ${PORT:-7001}
