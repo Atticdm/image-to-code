@@ -54,7 +54,7 @@ const StartPane: React.FC<Props> = ({ doCreate, importFromCode, settings, setSet
                 <SelectContent>
                   {Object.values(CodeGenerationModel).map((model) => (
                     <SelectItem key={model} value={model}>
-                      {CODE_GENERATION_MODEL_DESCRIPTIONS[model].name}
+                      {CODE_GENERATION_MODEL_DESCRIPTIONS[model]?.name ?? model}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -77,7 +77,7 @@ const StartPane: React.FC<Props> = ({ doCreate, importFromCode, settings, setSet
                 }
               >
                 <SelectTrigger className="w-full bg-zinc-900/50 border-zinc-700 hover:border-zinc-600 transition-colors">
-                  {settings.analysisModel
+                  {settings.analysisModel && CODE_GENERATION_MODEL_DESCRIPTIONS[settings.analysisModel]
                     ? CODE_GENERATION_MODEL_DESCRIPTIONS[settings.analysisModel].name
                     : "Standard (no extraction)"}
                 </SelectTrigger>
@@ -85,7 +85,7 @@ const StartPane: React.FC<Props> = ({ doCreate, importFromCode, settings, setSet
                   <SelectItem value="none">Standard (no extraction)</SelectItem>
                   {Object.values(CodeGenerationModel).map((model) => (
                     <SelectItem key={model} value={model}>
-                      {CODE_GENERATION_MODEL_DESCRIPTIONS[model].name}
+                      {CODE_GENERATION_MODEL_DESCRIPTIONS[model]?.name ?? model}
                     </SelectItem>
                   ))}
                 </SelectContent>

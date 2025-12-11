@@ -172,7 +172,7 @@ function SettingsDialog({ settings, setSettings }: Props) {
               }
             >
               <SelectTrigger id="analysis-model">
-                {settings.analysisModel 
+                {settings.analysisModel && CODE_GENERATION_MODEL_DESCRIPTIONS[settings.analysisModel]
                   ? CODE_GENERATION_MODEL_DESCRIPTIONS[settings.analysisModel].name
                   : "None (use standard generation)"}
               </SelectTrigger>
@@ -180,7 +180,7 @@ function SettingsDialog({ settings, setSettings }: Props) {
                 <SelectItem value="none">None (use standard generation)</SelectItem>
                 {Object.values(CodeGenerationModel).map((model) => (
                   <SelectItem key={model} value={model}>
-                    {CODE_GENERATION_MODEL_DESCRIPTIONS[model].name}
+                    {CODE_GENERATION_MODEL_DESCRIPTIONS[model]?.name ?? model}
                   </SelectItem>
                 ))}
               </SelectContent>
