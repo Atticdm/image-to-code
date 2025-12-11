@@ -24,4 +24,5 @@ COPY ./ /app/
 EXPOSE ${PORT:-7001}
 
 # Start command (Railway provides PORT env variable)
+# Use PORT from environment, default to 7001 if not set
 CMD poetry run uvicorn main:app --host 0.0.0.0 --port ${PORT:-7001}
