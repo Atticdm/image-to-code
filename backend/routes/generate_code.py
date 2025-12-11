@@ -60,6 +60,9 @@ from image_generation.core import generate_images
 from prompts import create_prompt
 from prompts.claude_prompts import VIDEO_PROMPT
 from prompts.types import Stack, PromptContent
+from image_analysis import extract_elements, extract_elements_as_svg
+from prompts.element_based_prompts import ELEMENT_BASED_SYSTEM_PROMPTS
+import json
 
 # from utils import pprint_prompt
 from ws.constants import APP_ERROR_WEB_SOCKET_CODE  # type: ignore
@@ -90,6 +93,8 @@ class PipelineContext:
     completions: List[str] = field(default_factory=list)
     variant_completions: Dict[int, str] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
+    extracted_elements: Dict[str, Any] | None = None  # Elements data from image analysis
+    element_svgs: Dict[str, str] = field(default_factory=dict)  # SVG data URLs for elements
 
     @property
     def send_message(self):
@@ -217,6 +222,8 @@ class ExtractedParams:
     prompt: PromptContent
     history: List[Dict[str, Any]]
     is_imported_from_code: bool
+    analysis_model: str | None = None  # Model for analyzing image and extracting elements
+    use_element_extraction: bool = False  # Whether to use element extraction workflow
 
 
 class ParameterExtractionStage:
@@ -280,6 +287,17 @@ class ParameterExtractionStage:
 
         # Extract imported code flag
         is_imported_from_code = params.get("isImportedFromCode", False)
+        
+        # Extract analysis model (optional, for element extraction workflow)
+        analysis_model = params.get("analysisModel", None)
+        
+        # Check if element extraction workflow should be used
+        # Use it if analysis model is provided and input mode is image
+        use_element_extraction = (
+            analysis_model is not None 
+            and validated_input_mode == "image"
+            and generation_type == "create"
+        )
 
         return ExtractedParams(
             stack=validated_stack,
@@ -292,6 +310,8 @@ class ParameterExtractionStage:
             prompt=prompt,
             history=history,
             is_imported_from_code=is_imported_from_code,
+            analysis_model=analysis_model,
+            use_element_extraction=use_element_extraction,
         )
 
     def _get_from_settings_dialog_or_env(
@@ -419,6 +439,72 @@ class ModelSelectionStage:
         return selected_models
 
 
+class ImageAnalysisStage:
+    """Handles image analysis and element extraction"""
+    
+    def __init__(
+        self,
+        send_message: Callable[[MessageType, str, int], Coroutine[Any, Any, None]],
+        throw_error: Callable[[str], Coroutine[Any, Any, None]],
+    ):
+        self.send_message = send_message
+        self.throw_error = throw_error
+    
+    async def analyze_image(
+        self,
+        image_data_url: str,
+        analysis_model: str,
+        openai_api_key: str | None,
+        anthropic_api_key: str | None,
+        gemini_api_key: str | None,
+    ) -> tuple[Dict[str, Any], Dict[str, str]]:
+        """Analyze image and extract elements as SVG."""
+        try:
+            await self.send_message("status", "Analyzing image and extracting elements...", 0)
+            
+            # Convert analysis_model string to Llm enum
+            analysis_llm = None
+            for llm in Llm:
+                if llm.value == analysis_model:
+                    analysis_llm = llm
+                    break
+            
+            if analysis_llm is None:
+                raise ValueError(f"Invalid analysis model: {analysis_model}")
+            
+            # Step 1: Extract elements with coordinates
+            await self.send_message("status", "Extracting design elements...", 0)
+            elements_data = await extract_elements(
+                image_data_url=image_data_url,
+                analysis_model=analysis_llm,
+                openai_api_key=openai_api_key,
+                anthropic_api_key=anthropic_api_key,
+                gemini_api_key=gemini_api_key,
+            )
+            
+            # Step 2: Extract elements as SVG using Gemini 3 Pro Image
+            if not gemini_api_key:
+                await self.throw_error(
+                    "Gemini API key required for SVG extraction. Please add GEMINI_API_KEY to environment variables."
+                )
+                raise ValueError("Gemini API key required")
+            
+            await self.send_message("status", "Extracting elements as SVG...", 0)
+            element_svgs = await extract_elements_as_svg(
+                original_image_data_url=image_data_url,
+                elements_data=elements_data,
+                gemini_api_key=gemini_api_key,
+            )
+            
+            await self.send_message("status", f"Extracted {len(element_svgs)} elements", 0)
+            
+            return elements_data, element_svgs
+            
+        except Exception as e:
+            await self.throw_error(f"Error during image analysis: {str(e)}")
+            raise
+
+
 class PromptCreationStage:
     """Handles prompt assembly for code generation"""
 
@@ -428,9 +514,18 @@ class PromptCreationStage:
     async def create_prompt(
         self,
         extracted_params: ExtractedParams,
+        elements_data: Dict[str, Any] | None = None,
+        element_svgs: Dict[str, str] | None = None,
     ) -> tuple[List[ChatCompletionMessageParam], Dict[str, str]]:
         """Create prompt messages and return image cache"""
         try:
+            # If using element extraction, use element-based prompts
+            if extracted_params.use_element_extraction and elements_data and element_svgs:
+                return await self.create_prompt_with_elements(
+                    extracted_params, elements_data, element_svgs
+                )
+            
+            # Standard prompt creation
             prompt_messages, image_cache = await create_prompt(
                 stack=extracted_params.stack,
                 input_mode=extracted_params.input_mode,
@@ -448,6 +543,59 @@ class PromptCreationStage:
                 "Error assembling prompt. Contact support at support@picoapps.xyz"
             )
             raise
+    
+    async def create_prompt_with_elements(
+        self,
+        extracted_params: ExtractedParams,
+        elements_data: Dict[str, Any],
+        element_svgs: Dict[str, str],
+    ) -> tuple[List[ChatCompletionMessageParam], Dict[str, str]]:
+        """Create prompt using extracted elements"""
+        stack = extracted_params.stack
+        system_content = ELEMENT_BASED_SYSTEM_PROMPTS[stack]
+        
+        # Add elements information to prompt
+        elements_info = json.dumps({
+            "elements": elements_data.get("elements", []),
+            "image_dimensions": elements_data.get("image_dimensions", {}),
+            "element_svgs": element_svgs,
+        }, indent=2)
+        
+        image_url = extracted_params.prompt["images"][0]
+        user_content: List[Any] = [
+            {
+                "type": "image_url",
+                "image_url": {"url": image_url, "detail": "high"},
+            },
+            {
+                "type": "text",
+                "text": f"""Generate code using the extracted design elements.
+
+Extracted elements data:
+{elements_info}
+
+Use the provided SVG elements (element_svgs) instead of generating new images.
+Place elements at their exact coordinates from the elements data.
+Match colors, fonts, sizes, spacing EXACTLY as shown in the screenshot.
+""",
+            },
+        ]
+        
+        prompt_messages = [
+            {
+                "role": "system",
+                "content": system_content,
+            },
+            {
+                "role": "user",
+                "content": user_content,
+            },
+        ]
+        
+        print_prompt_summary(prompt_messages, truncate=False)
+        
+        # Use SVG elements as image cache
+        return prompt_messages, element_svgs
 
 
 class MockResponseStage:
@@ -874,13 +1022,45 @@ class PromptCreationMiddleware(Middleware):
     async def process(
         self, context: PipelineContext, next_func: Callable[[], Awaitable[None]]
     ) -> None:
-        prompt_creator = PromptCreationStage(context.throw_error)
         assert context.extracted_params is not None
-        context.prompt_messages, context.image_cache = (
-            await prompt_creator.create_prompt(
-                context.extracted_params,
+        
+        # If using element extraction, analyze image first
+        if context.extracted_params.use_element_extraction:
+            image_analysis_stage = ImageAnalysisStage(
+                send_message=context.send_message,
+                throw_error=context.throw_error,
             )
-        )
+            
+            image_url = context.extracted_params.prompt["images"][0]
+            elements_data, element_svgs = await image_analysis_stage.analyze_image(
+                image_data_url=image_url,
+                analysis_model=context.extracted_params.analysis_model or "",
+                openai_api_key=context.extracted_params.openai_api_key,
+                anthropic_api_key=context.extracted_params.anthropic_api_key,
+                gemini_api_key=GEMINI_API_KEY,
+            )
+            
+            # Save to context
+            context.extracted_elements = elements_data
+            context.element_svgs = element_svgs
+            
+            # Create prompt with elements
+            prompt_creator = PromptCreationStage(context.throw_error)
+            context.prompt_messages, context.image_cache = (
+                await prompt_creator.create_prompt(
+                    context.extracted_params,
+                    elements_data=elements_data,
+                    element_svgs=element_svgs,
+                )
+            )
+        else:
+            # Standard prompt creation
+            prompt_creator = PromptCreationStage(context.throw_error)
+            context.prompt_messages, context.image_cache = (
+                await prompt_creator.create_prompt(
+                    context.extracted_params,
+                )
+            )
 
         await next_func()
 

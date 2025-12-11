@@ -71,6 +71,7 @@ function App() {
       editorTheme: EditorTheme.COBALT,
       generatedCodeConfig: Stack.HTML_TAILWIND,
       codeGenerationModel: CodeGenerationModel.GPT_5,
+      analysisModel: CodeGenerationModel.CLAUDE_4_5_OPUS_2025_09_29, // Default analysis model
       isTermOfServiceAccepted: false,
     },
     "setting"

@@ -16,6 +16,7 @@ import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "../ui/select";
 import { capitalize } from "../../lib/utils";
 import { IS_RUNNING_ON_CLOUD } from "../../config";
+import { CodeGenerationModel, CODE_GENERATION_MODEL_DESCRIPTIONS } from "../../lib/models";
 import {
   Accordion,
   AccordionContent,
@@ -130,6 +131,39 @@ function SettingsDialog({ settings, setSettings }: Props) {
                 }))
               }
             />
+          </div>
+
+          <div>
+            <Label htmlFor="analysis-model">
+              <div>Analysis Model (for element extraction)</div>
+              <div className="font-light mt-1 text-xs leading-relaxed">
+                Model used to analyze image and extract design elements. Leave empty to use standard generation.
+              </div>
+            </Label>
+
+            <Select
+              value={settings.analysisModel || ""}
+              onValueChange={(value) =>
+                setSettings((s) => ({
+                  ...s,
+                  analysisModel: value ? (value as CodeGenerationModel) : null,
+                }))
+              }
+            >
+              <SelectTrigger id="analysis-model">
+                {settings.analysisModel 
+                  ? CODE_GENERATION_MODEL_DESCRIPTIONS[settings.analysisModel].name
+                  : "None (use standard generation)"}
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None (use standard generation)</SelectItem>
+                {Object.values(CodeGenerationModel).map((model) => (
+                  <SelectItem key={model} value={model}>
+                    {CODE_GENERATION_MODEL_DESCRIPTIONS[model].name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <Accordion type="single" collapsible className="w-full">

@@ -14,6 +14,7 @@ export interface Settings {
   editorTheme: EditorTheme;
   generatedCodeConfig: Stack;
   codeGenerationModel: CodeGenerationModel;
+  analysisModel: CodeGenerationModel | null; // Model for analyzing image and extracting elements
   // Only relevant for hosted version
   isTermOfServiceAccepted: boolean;
   anthropicApiKey: string | null; // Added property for anthropic API key
