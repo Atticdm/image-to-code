@@ -5,7 +5,7 @@ Analyzes image and extracts design elements with coordinates.
 import json
 from typing import Dict, List, Any, Optional
 from openai.types.chat import ChatCompletionMessageParam
-from llm import Llm
+from llm import Llm, OPENAI_MODELS, ANTHROPIC_MODELS, GEMINI_MODELS
 from models import stream_openai_response, stream_claude_response, stream_gemini_response
 from config import OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY
 

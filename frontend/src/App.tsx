@@ -66,6 +66,7 @@ function App() {
       openAiApiKey: null,
       openAiBaseURL: null,
       anthropicApiKey: null,
+      geminiApiKey: null,
       screenshotOneApiKey: null,
       isImageGenerationEnabled: true,
       editorTheme: EditorTheme.COBALT,
@@ -327,6 +328,7 @@ function App() {
               doCreate={doCreate}
               importFromCode={importFromCode}
               settings={settings}
+              setSettings={setSettings}
             />
           </div>
         ) : (

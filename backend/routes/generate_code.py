@@ -217,6 +217,7 @@ class ExtractedParams:
     should_generate_images: bool
     openai_api_key: str | None
     anthropic_api_key: str | None
+    gemini_api_key: str | None
     openai_base_url: str | None
     generation_type: Literal["create", "update"]
     prompt: PromptContent
@@ -257,6 +258,11 @@ class ParameterExtractionStage:
         # If neither is provided, we throw an error later only if Claude is used.
         anthropic_api_key = self._get_from_settings_dialog_or_env(
             params, "anthropicApiKey", ANTHROPIC_API_KEY
+        )
+
+        # Gemini API key for element extraction and image generation
+        gemini_api_key = self._get_from_settings_dialog_or_env(
+            params, "geminiApiKey", GEMINI_API_KEY
         )
 
         # Base URL for OpenAI API
@@ -305,6 +311,7 @@ class ParameterExtractionStage:
             should_generate_images=should_generate_images,
             openai_api_key=openai_api_key,
             anthropic_api_key=anthropic_api_key,
+            gemini_api_key=gemini_api_key,
             openai_base_url=openai_base_url,
             generation_type=generation_type,
             prompt=prompt,
@@ -378,63 +385,37 @@ class ModelSelectionStage:
         anthropic_api_key: str | None,
         gemini_api_key: str | None,
     ) -> List[Llm]:
-        """Model selection prioritizing latest models: GPT-5, Claude Opus 4.5, Gemini 3 Pro"""
+        """Model selection using ONLY newest models: GPT-5, Claude Opus 4.5, Gemini 3 Pro"""
 
-        # Use latest models: Claude Opus 4.5 (or Sonnet 4.5 as fallback)
-        claude_model = Llm.CLAUDE_4_5_OPUS_2025_09_29
-        claude_fallback = Llm.CLAUDE_4_5_SONNET_2025_09_29
-        
-        # Use GPT-5 (or GPT-5 Turbo as fallback, then GPT-4.1)
+        # FORCE newest models only
         gpt_model = Llm.GPT_5
-        gpt_fallback = Llm.GPT_5_TURBO
-        gpt_legacy = Llm.GPT_4_1_2025_04_14
-        
-        # Use Gemini 3 Pro for third option
+        claude_model = Llm.CLAUDE_4_5_OPUS_2025_09_29
         gemini_model = Llm.GEMINI_3_PRO
 
-        # For text input mode, use Claude 4.5 Sonnet as third option
-        # For other input modes (image/video), use Gemini 3 Pro as third option
-        if input_mode == "text":
-            third_model = claude_fallback
-        else:
-            # Gemini only works for create right now
-            if generation_type == "create":
-                third_model = gemini_model
-            else:
-                third_model = claude_fallback
-
-        # Define models based on available API keys
-        # Priority: GPT-5, Claude Opus 4.5, Gemini 3 Pro
-        if (
-            openai_api_key
-            and anthropic_api_key
-            and (gemini_api_key or input_mode == "text")
-        ):
-            # All three providers available - use best models
-            models = [
-                gpt_model if openai_api_key else gpt_legacy,
-                claude_model if anthropic_api_key else claude_fallback,
-                third_model,
-            ]
-        elif openai_api_key and anthropic_api_key:
-            # OpenAI + Anthropic - use GPT-5 and Claude Opus 4.5
-            models = [
-                claude_model if anthropic_api_key else claude_fallback,
-                gpt_model if openai_api_key else gpt_legacy,
-            ]
-        elif anthropic_api_key:
-            # Only Anthropic - use Claude Opus 4.5 and Sonnet 4.5
-            models = [claude_model, claude_fallback]
-        elif openai_api_key:
-            # Only OpenAI - use GPT-5 and GPT-5 Turbo (or fallback to GPT-4.1)
-            models = [gpt_model, gpt_fallback if openai_api_key else gpt_legacy]
-        else:
+        # Build list of available models based on API keys
+        available_models: List[Llm] = []
+        
+        # Priority order: GPT-5 -> Claude Opus 4.5 -> Gemini 3 Pro
+        if openai_api_key:
+            available_models.append(gpt_model)
+        
+        if anthropic_api_key:
+            available_models.append(claude_model)
+        
+        # Gemini only works for create mode with images
+        if gemini_api_key and generation_type == "create" and input_mode != "text":
+            available_models.append(gemini_model)
+        
+        if not available_models:
             raise Exception("No OpenAI or Anthropic key")
 
-        # Cycle through models: [A, B] with num=5 becomes [A, B, A, B, A]
+        # Log which models are being used
+        print(f"Available models: {[m.value for m in available_models]}")
+
+        # Cycle through available models for variants
         selected_models: List[Llm] = []
         for i in range(num_variants):
-            selected_models.append(models[i % len(models)])
+            selected_models.append(available_models[i % len(available_models)])
 
         return selected_models
 
@@ -709,12 +690,14 @@ class ParallelGenerationStage:
         openai_api_key: str | None,
         openai_base_url: str | None,
         anthropic_api_key: str | None,
+        gemini_api_key: str | None,
         should_generate_images: bool,
     ):
         self.send_message = send_message
         self.openai_api_key = openai_api_key
         self.openai_base_url = openai_base_url
         self.anthropic_api_key = anthropic_api_key
+        self.gemini_api_key = gemini_api_key
         self.should_generate_images = should_generate_images
 
     async def process_variants(
@@ -770,11 +753,11 @@ class ParallelGenerationStage:
                         index=index,
                     )
                 )
-            elif GEMINI_API_KEY and model in GEMINI_MODELS:
+            elif self.gemini_api_key and model in GEMINI_MODELS:
                 tasks.append(
                     stream_gemini_response(
                         prompt_messages,
-                        api_key=GEMINI_API_KEY,
+                        api_key=self.gemini_api_key,
                         callback=lambda x, i=index: self._process_chunk(x, i),
                         model_name=model.value,
                     )
@@ -783,21 +766,13 @@ class ParallelGenerationStage:
                 if self.anthropic_api_key is None:
                     raise Exception("Anthropic API key is missing.")
 
-                # Use Claude Opus 4.5 for best quality, fallback to Sonnet 4.5
-                if model == Llm.CLAUDE_4_5_OPUS_2025_09_29:
-                    claude_model = Llm.CLAUDE_4_5_OPUS_2025_09_29
-                elif model == Llm.CLAUDE_4_5_SONNET_2025_09_29:
-                    claude_model = Llm.CLAUDE_4_5_SONNET_2025_09_29
-                else:
-                    # Fallback to Sonnet 4.5 for other Claude models
-                    claude_model = Llm.CLAUDE_4_5_SONNET_2025_09_29
-
+                # Use the exact model that was selected
                 tasks.append(
                     stream_claude_response(
                         prompt_messages,
                         api_key=self.anthropic_api_key,
                         callback=lambda x, i=index: self._process_chunk(x, i),
-                        model_name=claude_model.value,
+                        model_name=model.value,
                     )
                 )
 
@@ -874,14 +849,13 @@ class ParallelGenerationStage:
             return completion
 
         # Priority: Gemini 3 Pro Nano > Flux > DALL-E 3
-        gemini_api_key = GEMINI_API_KEY
         replicate_api_key = REPLICATE_API_KEY
         
-        if gemini_api_key:
+        if self.gemini_api_key:
             # Use Gemini 3 Pro Nano for image generation (best quality)
             image_generation_model = "gemini-3-pro-nano"
-            api_key = gemini_api_key
-            gemini_key = gemini_api_key
+            api_key = self.gemini_api_key
+            gemini_key = self.gemini_api_key
         elif replicate_api_key:
             # Fallback to Flux Schnell
             image_generation_model = "flux"
@@ -1037,7 +1011,7 @@ class PromptCreationMiddleware(Middleware):
                 analysis_model=context.extracted_params.analysis_model or "",
                 openai_api_key=context.extracted_params.openai_api_key,
                 anthropic_api_key=context.extracted_params.anthropic_api_key,
-                gemini_api_key=GEMINI_API_KEY,
+                gemini_api_key=context.extracted_params.gemini_api_key,
             )
             
             # Save to context
@@ -1098,7 +1072,7 @@ class CodeGenerationMiddleware(Middleware):
                         input_mode=context.extracted_params.input_mode,
                         openai_api_key=context.extracted_params.openai_api_key,
                         anthropic_api_key=context.extracted_params.anthropic_api_key,
-                        gemini_api_key=GEMINI_API_KEY,
+                        gemini_api_key=context.extracted_params.gemini_api_key,
                     )
 
                     # Generate code for all variants
@@ -1107,6 +1081,7 @@ class CodeGenerationMiddleware(Middleware):
                         openai_api_key=context.extracted_params.openai_api_key,
                         openai_base_url=context.extracted_params.openai_base_url,
                         anthropic_api_key=context.extracted_params.anthropic_api_key,
+                        gemini_api_key=context.extracted_params.gemini_api_key,
                         should_generate_images=context.extracted_params.should_generate_images,
                     )
 

@@ -17,7 +17,8 @@ export interface Settings {
   analysisModel: CodeGenerationModel | null; // Model for analyzing image and extracting elements
   // Only relevant for hosted version
   isTermOfServiceAccepted: boolean;
-  anthropicApiKey: string | null; // Added property for anthropic API key
+  anthropicApiKey: string | null;
+  geminiApiKey: string | null; // Gemini API key for element extraction and image generation
 }
 
 export enum AppState {

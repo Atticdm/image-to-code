@@ -134,6 +134,27 @@ function SettingsDialog({ settings, setSettings }: Props) {
           </div>
 
           <div>
+            <Label htmlFor="gemini-api-key">
+              <div>Gemini API key</div>
+              <div className="font-light mt-1 text-xs leading-relaxed">
+                Required for element extraction and Gemini 3 Pro image generation.
+              </div>
+            </Label>
+
+            <Input
+              id="gemini-api-key"
+              placeholder="Gemini API key"
+              value={settings.geminiApiKey || ""}
+              onChange={(e) =>
+                setSettings((s) => ({
+                  ...s,
+                  geminiApiKey: e.target.value,
+                }))
+              }
+            />
+          </div>
+
+          <div>
             <Label htmlFor="analysis-model">
               <div>Analysis Model (for element extraction)</div>
               <div className="font-light mt-1 text-xs leading-relaxed">
