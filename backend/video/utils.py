@@ -7,8 +7,12 @@ import tempfile
 import uuid
 import warnings
 from typing import Any, Union, cast
+
 # Suppress SyntaxWarnings from moviepy library (known issue in moviepy 1.0.3)
-warnings.filterwarnings("ignore", category=SyntaxWarning, module="moviepy")
+# Must be set before importing moviepy
+warnings.filterwarnings("ignore", category=SyntaxWarning)
+warnings.filterwarnings("ignore", message=".*invalid escape sequence.*")
+
 from moviepy.editor import VideoFileClip  # type: ignore
 from PIL import Image
 import math
