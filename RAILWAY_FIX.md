@@ -1,41 +1,37 @@
 # 🔧 Исправление ошибок деплоя на Railway
 
-## Проблема
+## ✅ Исправлено!
 
-Railway не может найти Dockerfile в корне проекта, потому что:
+Проблема была в том, что Railway не мог найти Dockerfile, потому что:
 1. Backend находится в поддиректории `backend/`
 2. Frontend находится в поддиректории `frontend/`
 3. Railway ищет Dockerfile в корне по умолчанию
 
 ## Решение
 
-### Вариант 1: Создать отдельные сервисы (рекомендуется)
+Созданы отдельные `railway.toml` файлы для каждого сервиса:
 
-1. **Backend сервис:**
-   - Root Directory: `backend`
-   - Dockerfile Path: `Dockerfile`
+### Backend (`backend/railway.toml`):
+- Dockerfile Path: `Dockerfile` (относительно `backend/`)
+- Start Command: `poetry run uvicorn main:app --host 0.0.0.0 --port $PORT`
 
-2. **Frontend сервис:**
-   - Root Directory: `frontend`
-   - Dockerfile Path: `Dockerfile.prod`
-
-### Вариант 2: Использовать railway.toml в корне
-
-Railway автоматически обнаружит `railway.toml` в корне проекта, но для этого нужно указать правильный путь к Dockerfile.
+### Frontend (`frontend/railway.toml`):
+- Dockerfile Path: `Dockerfile.prod` (относительно `frontend/`)
+- Использует nginx для статики
 
 ## Настройка в Railway Dashboard
 
-### Backend:
+### Для Backend сервиса:
 1. Settings → Source
-2. Root Directory: `backend`
+2. Root Directory: `backend` ⚠️ **ВАЖНО!**
 3. Settings → Build
-4. Dockerfile Path: `Dockerfile`
+4. Dockerfile Path: `Dockerfile` (или оставить пустым, railway.toml укажет)
 
-### Frontend:
+### Для Frontend сервиса (если создадите отдельный):
 1. Settings → Source
-2. Root Directory: `frontend`
+2. Root Directory: `frontend` ⚠️ **ВАЖНО!**
 3. Settings → Build
-4. Dockerfile Path: `Dockerfile.prod`
+4. Dockerfile Path: `Dockerfile.prod` (или оставить пустым, railway.toml укажет)
 
 ## Переменные окружения
 
