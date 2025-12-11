@@ -195,14 +195,19 @@ async def run_evals(request: RunEvalsRequest) -> List[str]:
 
 @router.get("/models", response_model=Dict[str, List[str]])
 async def get_models():
+    # Filter out deprecated models, prioritize latest models
+    deprecated_models = {
+        Llm.GPT_4_TURBO_2024_04_09,
+        Llm.GPT_4_VISION,
+        Llm.CLAUDE_3_SONNET,
+        Llm.CLAUDE_3_OPUS,
+        Llm.CLAUDE_3_HAIKU,
+        Llm.GPT_4O_2024_05_13,  # Older GPT-4o version
+    }
     current_models = [
         model.value
         for model in Llm
-        if model != Llm.GPT_4_TURBO_2024_04_09
-        and model != Llm.GPT_4_VISION
-        and model != Llm.CLAUDE_3_SONNET
-        and model != Llm.CLAUDE_3_OPUS
-        and model != Llm.CLAUDE_3_HAIKU
+        if model not in deprecated_models
     ]
 
     # Import Stack type from prompts.types and get all literal values

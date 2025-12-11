@@ -70,7 +70,7 @@ function App() {
       isImageGenerationEnabled: true,
       editorTheme: EditorTheme.COBALT,
       generatedCodeConfig: Stack.HTML_TAILWIND,
-      codeGenerationModel: CodeGenerationModel.CLAUDE_4_5_SONNET_2025_09_29,
+      codeGenerationModel: CodeGenerationModel.GPT_5,
       isTermOfServiceAccepted: false,
     },
     "setting"

@@ -59,6 +59,12 @@ async def stream_gemini_response(
                 thinking_budget=5000, include_thoughts=True
             ),
         )
+    elif model_name == Llm.GEMINI_3_PRO.value:
+        # Gemini 3 Pro - increased token limit for better quality
+        config = types.GenerateContentConfig(
+            temperature=0,
+            max_output_tokens=32768,
+        )
     else:
         # TODO: Fix output tokens here
         config = types.GenerateContentConfig(

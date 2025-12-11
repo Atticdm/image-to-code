@@ -358,38 +358,56 @@ class ModelSelectionStage:
         anthropic_api_key: str | None,
         gemini_api_key: str | None,
     ) -> List[Llm]:
-        """Simple model cycling that scales with num_variants"""
+        """Model selection prioritizing latest models: GPT-5, Claude Opus 4.5, Gemini 3 Pro"""
 
-        claude_model = Llm.CLAUDE_3_7_SONNET_2025_02_19
+        # Use latest models: Claude Opus 4.5 (or Sonnet 4.5 as fallback)
+        claude_model = Llm.CLAUDE_4_5_OPUS_2025_09_29
+        claude_fallback = Llm.CLAUDE_4_5_SONNET_2025_09_29
+        
+        # Use GPT-5 (or GPT-5 Turbo as fallback, then GPT-4.1)
+        gpt_model = Llm.GPT_5
+        gpt_fallback = Llm.GPT_5_TURBO
+        gpt_legacy = Llm.GPT_4_1_2025_04_14
+        
+        # Use Gemini 3 Pro for third option
+        gemini_model = Llm.GEMINI_3_PRO
 
-        # For text input mode, use Claude 4 Sonnet as third option
-        # For other input modes (image/video), use Gemini as third option
+        # For text input mode, use Claude 4.5 Sonnet as third option
+        # For other input modes (image/video), use Gemini 3 Pro as third option
         if input_mode == "text":
-            third_model = Llm.CLAUDE_4_SONNET_2025_05_14
+            third_model = claude_fallback
         else:
             # Gemini only works for create right now
             if generation_type == "create":
-                third_model = Llm.GEMINI_2_0_FLASH
+                third_model = gemini_model
             else:
-                third_model = claude_model
+                third_model = claude_fallback
 
         # Define models based on available API keys
+        # Priority: GPT-5, Claude Opus 4.5, Gemini 3 Pro
         if (
             openai_api_key
             and anthropic_api_key
             and (gemini_api_key or input_mode == "text")
         ):
+            # All three providers available - use best models
             models = [
-                Llm.GPT_4_1_2025_04_14,
-                claude_model,
+                gpt_model if openai_api_key else gpt_legacy,
+                claude_model if anthropic_api_key else claude_fallback,
                 third_model,
             ]
         elif openai_api_key and anthropic_api_key:
-            models = [claude_model, Llm.GPT_4_1_2025_04_14]
+            # OpenAI + Anthropic - use GPT-5 and Claude Opus 4.5
+            models = [
+                claude_model if anthropic_api_key else claude_fallback,
+                gpt_model if openai_api_key else gpt_legacy,
+            ]
         elif anthropic_api_key:
-            models = [claude_model, Llm.CLAUDE_4_5_SONNET_2025_09_29]
+            # Only Anthropic - use Claude Opus 4.5 and Sonnet 4.5
+            models = [claude_model, claude_fallback]
         elif openai_api_key:
-            models = [Llm.GPT_4_1_2025_04_14, Llm.GPT_4O_2024_11_20]
+            # Only OpenAI - use GPT-5 and GPT-5 Turbo (or fallback to GPT-4.1)
+            models = [gpt_model, gpt_fallback if openai_api_key else gpt_legacy]
         else:
             raise Exception("No OpenAI or Anthropic key")
 
@@ -617,11 +635,13 @@ class ParallelGenerationStage:
                 if self.anthropic_api_key is None:
                     raise Exception("Anthropic API key is missing.")
 
-                # For creation, use Claude Sonnet 3.7
-                # For updates, we use Claude Sonnet 4.5 until we have tested Claude Sonnet 3.7
-                if params["generationType"] == "create":
-                    claude_model = Llm.CLAUDE_3_7_SONNET_2025_02_19
+                # Use Claude Opus 4.5 for best quality, fallback to Sonnet 4.5
+                if model == Llm.CLAUDE_4_5_OPUS_2025_09_29:
+                    claude_model = Llm.CLAUDE_4_5_OPUS_2025_09_29
+                elif model == Llm.CLAUDE_4_5_SONNET_2025_09_29:
+                    claude_model = Llm.CLAUDE_4_5_SONNET_2025_09_29
                 else:
+                    # Fallback to Sonnet 4.5 for other Claude models
                     claude_model = Llm.CLAUDE_4_5_SONNET_2025_09_29
 
                 tasks.append(
@@ -705,18 +725,31 @@ class ParallelGenerationStage:
         if not self.should_generate_images:
             return completion
 
+        # Priority: Gemini 3 Pro Nano > Flux > DALL-E 3
+        gemini_api_key = GEMINI_API_KEY
         replicate_api_key = REPLICATE_API_KEY
-        if replicate_api_key:
+        
+        if gemini_api_key:
+            # Use Gemini 3 Pro Nano for image generation (best quality)
+            image_generation_model = "gemini-3-pro-nano"
+            api_key = gemini_api_key
+            gemini_key = gemini_api_key
+        elif replicate_api_key:
+            # Fallback to Flux Schnell
             image_generation_model = "flux"
             api_key = replicate_api_key
+            gemini_key = None
         else:
             if not self.openai_api_key:
                 print(
-                    "No OpenAI API key and Replicate key found. Skipping image generation."
+                    "No Gemini, OpenAI, or Replicate API key found. Skipping image generation."
                 )
                 return completion
+            # Fallback to DALL-E 3
             image_generation_model = "dalle3"
             api_key = self.openai_api_key
+            gemini_key = None
+            gemini_key = None
 
         print("Generating images with model: ", image_generation_model)
 
@@ -726,6 +759,7 @@ class ParallelGenerationStage:
             base_url=self.openai_base_url,
             image_cache=image_cache,
             model=image_generation_model,
+            gemini_api_key=gemini_key,
         )
 
     async def _process_variant_completion(
