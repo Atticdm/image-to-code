@@ -1,5 +1,9 @@
 # Load environment variables first
 from dotenv import load_dotenv
+import warnings
+
+# Suppress SyntaxWarnings from moviepy library (known issue in moviepy 1.0.3)
+warnings.filterwarnings("ignore", category=SyntaxWarning, module="moviepy")
 
 load_dotenv()
 
