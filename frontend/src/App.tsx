@@ -20,9 +20,7 @@ import PreviewPane from "./components/preview/PreviewPane";
 import StartPane from "./components/start-pane/StartPane";
 import { Commit } from "./components/commits/types";
 import { createCommit } from "./components/commits/utils";
-import GenerateFromText from "./components/generate-from-text/GenerateFromText";
-import { GearIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
-import { Button } from "./components/ui/button";
+import { GitHubLogoIcon } from "@radix-ui/react-icons";
 
 function App() {
   const {

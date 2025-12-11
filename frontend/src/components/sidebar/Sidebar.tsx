@@ -25,7 +25,6 @@ function Sidebar({
   cancelCodeGeneration,
 }: SidebarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [isErrorExpanded, setIsErrorExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
 
   const { appState, updateInstruction, setUpdateInstruction, updateImages, setUpdateImages } = useAppStore();
@@ -85,10 +84,6 @@ function Sidebar({
       textareaRef.current.focus();
     }
   }, [appState, isSelectedVariantComplete]);
-
-  useEffect(() => {
-    setIsErrorExpanded(false);
-  }, [head, commits[head || ""]?.selectedVariantIndex]);
 
   return (
     <div className="flex flex-col h-full gap-y-4">
