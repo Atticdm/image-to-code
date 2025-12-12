@@ -16,13 +16,14 @@ import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "../ui/select";
 import { capitalize } from "../../lib/utils";
 import { IS_RUNNING_ON_CLOUD } from "../../config";
-import { CodeGenerationModel, CODE_GENERATION_MODEL_DESCRIPTIONS } from "../../lib/models";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "../ui/accordion";
+import { useRegistryStore } from "../../store/registry-store";
+import { getModelNameFromRegistry } from "../../lib/backendRegistry";
 
 interface Props {
   settings: Settings;
@@ -30,6 +31,7 @@ interface Props {
 }
 
 function SettingsDialog({ settings, setSettings }: Props) {
+  const { registry } = useRegistryStore();
   const handleThemeChange = (theme: EditorTheme) => {
     setSettings((s) => ({
       ...s,
@@ -167,20 +169,20 @@ function SettingsDialog({ settings, setSettings }: Props) {
               onValueChange={(value) =>
                 setSettings((s) => ({
                   ...s,
-                  analysisModel: value && value !== "none" ? (value as CodeGenerationModel) : null,
+                  analysisModel: value && value !== "none" ? value : null,
                 }))
               }
             >
               <SelectTrigger id="analysis-model">
-                {settings.analysisModel && CODE_GENERATION_MODEL_DESCRIPTIONS[settings.analysisModel]
-                  ? CODE_GENERATION_MODEL_DESCRIPTIONS[settings.analysisModel].name
+                {settings.analysisModel
+                  ? getModelNameFromRegistry(registry, settings.analysisModel)
                   : "None (use standard generation)"}
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None (use standard generation)</SelectItem>
-                {Object.values(CodeGenerationModel).map((model) => (
+                {(registry?.models?.map((m) => m.id) ?? []).map((model) => (
                   <SelectItem key={model} value={model}>
-                    {CODE_GENERATION_MODEL_DESCRIPTIONS[model]?.name ?? model}
+                    {getModelNameFromRegistry(registry, model)}
                   </SelectItem>
                 ))}
               </SelectContent>

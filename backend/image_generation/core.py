@@ -147,6 +147,38 @@ def create_alt_url_mapping(code: str) -> Dict[str, str]:
     return mapping
 
 
+def apply_image_cache(code: str, image_cache: Dict[str, str]) -> str:
+    """
+    Replace placeholder images (placehold.co) with cached URLs/data URLs by matching `alt`.
+
+    This is used for "asset injection" workflows (e.g. element extraction), where
+    we already have the correct image content and do not want to generate it.
+    """
+    soup = BeautifulSoup(code, "html.parser")
+    images = soup.find_all("img")
+
+    did_replace = False
+    for img in images:
+        src = img.get("src")
+        alt = img.get("alt")
+        if not src or not alt:
+            continue
+        if not src.startswith("https://placehold.co"):
+            continue
+
+        new_url = image_cache.get(alt)
+        if not new_url:
+            continue
+
+        width, height = extract_dimensions(src)
+        img["width"] = width
+        img["height"] = height
+        img["src"] = new_url
+        did_replace = True
+
+    return soup.prettify() if did_replace else code
+
+
 async def generate_images(
     code: str,
     api_key: str,
@@ -159,44 +191,40 @@ async def generate_images(
     soup = BeautifulSoup(code, "html.parser")
     images = soup.find_all("img")
 
-    # Extract alt texts as image prompts
-    alts: List[str | None] = []
+    alt_to_prompt: Dict[str, str] = {}
     for img in images:
-        # Only include URL if the image starts with https://placehold.co
-        # and it's not already in the image_cache
-        if (
-            img.get("src", None)
-            and img["src"].startswith("https://placehold.co")
-            and image_cache.get(img.get("alt")) is None
-        ):
-            alts.append(img.get("alt", None))
+        src = img.get("src")
+        alt = img.get("alt")
+        if not src or not alt:
+            continue
+        if not src.startswith("https://placehold.co"):
+            continue
+        if image_cache.get(alt) is not None:
+            continue
 
-    # Exclude images with no alt text
-    filtered_alts: List[str] = [alt for alt in alts if alt is not None]
+        prompt = img.get("data-prompt") or alt
+        alt_to_prompt.setdefault(alt, prompt)
 
-    # Remove duplicates
-    prompts = list(set(filtered_alts))
+    alts_to_generate = list(alt_to_prompt.keys())
+    prompts = [alt_to_prompt[alt] for alt in alts_to_generate]
 
-    # Return early if there are no images to replace
-    if len(prompts) == 0:
-        return code
+    mapped_image_urls: Dict[str, Union[str, None]] = {}
 
-    # Generate images
-    results = await process_tasks(prompts, api_key, base_url, model, gemini_api_key)
-
-    # Create a dict mapping alt text to image URL
-    mapped_image_urls = dict(zip(prompts, results))
+    if len(prompts) > 0:
+        results = await process_tasks(prompts, api_key, base_url, model, gemini_api_key)
+        mapped_image_urls = dict(zip(alts_to_generate, results))
 
     # Merge with image_cache
     mapped_image_urls = {**mapped_image_urls, **image_cache}
 
     # Replace old image URLs with the generated URLs
+    did_replace = False
     for img in images:
         # Skip images that don't start with https://placehold.co (leave them alone)
         if not img["src"].startswith("https://placehold.co"):
             continue
 
-        new_url = mapped_image_urls[img.get("alt")]
+        new_url = mapped_image_urls.get(img.get("alt"))
 
         if new_url:
             # Set width and height attributes
@@ -205,9 +233,10 @@ async def generate_images(
             img["height"] = height
             # Replace img['src'] with the mapped image URL
             img["src"] = new_url
+            did_replace = True
         else:
             print("Image generation failed for alt text:" + img.get("alt"))
 
     # Return the modified HTML
     # (need to prettify it because BeautifulSoup messes up the formatting)
-    return soup.prettify()
+    return soup.prettify() if did_replace else code

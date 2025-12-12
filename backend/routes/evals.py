@@ -1,5 +1,5 @@
 import os
-from fastapi import APIRouter, Query, Request, HTTPException
+from fastapi import APIRouter, Depends, Header, Query, Request, HTTPException
 from pydantic import BaseModel
 from evals.utils import image_to_data_url
 from evals.config import EVALS_DIR
@@ -9,8 +9,28 @@ from typing import List, Dict
 from llm import Llm
 from prompts.types import Stack
 from pathlib import Path
+from config import IS_PROD
+from config.settings import settings
 
-router = APIRouter()
+
+def _require_evals_access(x_evals_key: str | None = Header(default=None)) -> None:
+    """
+    Prod hygiene: eval routes are dev tooling.
+
+    - In dev: allow.
+    - In prod: require `EVALS_API_KEY` via `X-Evals-Key` header, or disable entirely
+      if `EVALS_API_KEY` is unset.
+    """
+    if not IS_PROD:
+        return
+    evals_key = getattr(settings, "EVALS_API_KEY", None)
+    if not evals_key:
+        raise HTTPException(status_code=404, detail="Not Found")
+    if x_evals_key != evals_key:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+router = APIRouter(dependencies=[Depends(_require_evals_access)])
 
 # Update this if the number of outputs generated per input changes
 N = 1
@@ -191,29 +211,6 @@ async def run_evals(request: RunEvalsRequest) -> List[str]:
         all_output_files.extend(output_files)
 
     return all_output_files
-
-
-@router.get("/models", response_model=Dict[str, List[str]])
-async def get_models():
-    # Filter out deprecated models, prioritize latest models
-    deprecated_models = {
-        Llm.GPT_4_TURBO_2024_04_09,
-        Llm.GPT_4_VISION,
-        Llm.CLAUDE_3_SONNET,
-        Llm.CLAUDE_3_OPUS,
-        Llm.CLAUDE_3_HAIKU,
-        Llm.GPT_4O_2024_05_13,  # Older GPT-4o version
-    }
-    current_models = [
-        model.value
-        for model in Llm
-        if model not in deprecated_models
-    ]
-
-    # Import Stack type from prompts.types and get all literal values
-    available_stacks = list(Stack.__args__)
-
-    return {"models": current_models, "stacks": available_stacks}
 
 
 class BestOfNEvalsResponse(BaseModel):

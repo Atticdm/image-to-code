@@ -2,7 +2,6 @@ import React from "react";
 import { useAppStore } from "../../store/app-store";
 import { AppState, Settings } from "../../types";
 import OutputSettingsSection from "./OutputSettingsSection";
-import { Stack } from "../../lib/stacks";
 
 interface GenerationSettingsProps {
   settings: Settings;
@@ -15,7 +14,7 @@ export const GenerationSettings: React.FC<GenerationSettingsProps> = ({
 }) => {
   const { appState } = useAppStore();
 
-  function setStack(stack: Stack) {
+  function setStack(stack: string) {
     setSettings((prev: Settings) => ({
       ...prev,
       generatedCodeConfig: stack,

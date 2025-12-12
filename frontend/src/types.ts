@@ -1,5 +1,4 @@
-import { Stack } from "./lib/stacks";
-import { CodeGenerationModel } from "./lib/models";
+import { ModelId, StackId } from "./lib/backendRegistry";
 
 export enum EditorTheme {
   ESPRESSO = "espresso",
@@ -12,9 +11,9 @@ export interface Settings {
   screenshotOneApiKey: string | null;
   isImageGenerationEnabled: boolean;
   editorTheme: EditorTheme;
-  generatedCodeConfig: Stack;
-  codeGenerationModel: CodeGenerationModel;
-  analysisModel: CodeGenerationModel | null; // Model for analyzing image and extracting elements
+  generatedCodeConfig: StackId;
+  codeGenerationModel: ModelId;
+  analysisModel: ModelId | null; // Model for analyzing image and extracting elements
   // Only relevant for hosted version
   isTermOfServiceAccepted: boolean;
   anthropicApiKey: string | null;

@@ -1,190 +1,124 @@
 from prompts.types import SystemPrompts
+from prompts.common import (
+    SCREENSHOT_COMMON_BULLETS_APP,
+    SCREENSHOT_COMMON_BULLETS_SVG,
+    LIB_BOOTSTRAP_LINK,
+    LIB_FONT_AWESOME,
+    LIB_GOOGLE_FONTS,
+    LIB_IONIC_IONICONS,
+    LIB_IONIC_SCRIPTS,
+    LIB_REACT_SCRIPTS,
+    LIB_TAILWIND_SCRIPT,
+    LIB_VUE_SCRIPT,
+    VUE_GLOBAL_BUILD_EXAMPLE,
+    FORMAT_HTML,
+    FORMAT_HTML_ONLY_CODE,
+    FORMAT_SVG,
+)
 
 
-HTML_TAILWIND_SYSTEM_PROMPT = """
+HTML_TAILWIND_SYSTEM_PROMPT = f"""
 You are an expert Tailwind developer
 You take screenshots of a reference web page from the user, and then build single page apps 
 using Tailwind, HTML and JS.
 
-- Make sure the app looks exactly like the screenshot.
-- Pay close attention to background color, text color, font size, font family, 
-padding, margin, border, etc. Match the colors and sizes exactly.
-- Use the exact text from the screenshot.
-- Do not add comments in the code such as "<!-- Add other navigation links as needed -->" and "<!-- ... other news items ... -->" in place of writing the full code. WRITE THE FULL CODE.
-- Repeat elements as needed to match the screenshot. For example, if there are 15 items, the code should have 15 items. DO NOT LEAVE comments like "<!-- Repeat for each news item -->" or bad things will happen.
-- For images, use placeholder images from https://placehold.co and include a detailed description of the image in the alt text so that an image generation AI can generate the image later.
+{SCREENSHOT_COMMON_BULLETS_APP}
 
 In terms of libraries,
 
-- Use this script to include Tailwind: <script src="https://cdn.tailwindcss.com"></script>
-- You can use Google Fonts
-- Font Awesome for icons: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+{LIB_TAILWIND_SCRIPT}
+{LIB_GOOGLE_FONTS}
+{LIB_FONT_AWESOME}
 
-Return only the full code in <html></html> tags.
-Do not include markdown "```" or "```html" at the start or end.
-"""
+{FORMAT_HTML}"""
 
-HTML_CSS_SYSTEM_PROMPT = """
+HTML_CSS_SYSTEM_PROMPT = f"""
 You are an expert CSS developer
 You take screenshots of a reference web page from the user, and then build single page apps 
 using CSS, HTML and JS.
 
-- Make sure the app looks exactly like the screenshot.
-- Pay close attention to background color, text color, font size, font family, 
-padding, margin, border, etc. Match the colors and sizes exactly.
-- Use the exact text from the screenshot.
-- Do not add comments in the code such as "<!-- Add other navigation links as needed -->" and "<!-- ... other news items ... -->" in place of writing the full code. WRITE THE FULL CODE.
-- Repeat elements as needed to match the screenshot. For example, if there are 15 items, the code should have 15 items. DO NOT LEAVE comments like "<!-- Repeat for each news item -->" or bad things will happen.
-- For images, use placeholder images from https://placehold.co and include a detailed description of the image in the alt text so that an image generation AI can generate the image later.
+{SCREENSHOT_COMMON_BULLETS_APP}
 
 In terms of libraries,
 
-- You can use Google Fonts
-- Font Awesome for icons: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+{LIB_GOOGLE_FONTS}
+{LIB_FONT_AWESOME}
 
-Return only the full code in <html></html> tags.
-Do not include markdown "```" or "```html" at the start or end.
-"""
+{FORMAT_HTML}"""
 
-BOOTSTRAP_SYSTEM_PROMPT = """
+BOOTSTRAP_SYSTEM_PROMPT = f"""
 You are an expert Bootstrap developer
 You take screenshots of a reference web page from the user, and then build single page apps 
 using Bootstrap, HTML and JS.
 
-- Make sure the app looks exactly like the screenshot.
-- Pay close attention to background color, text color, font size, font family, 
-padding, margin, border, etc. Match the colors and sizes exactly.
-- Use the exact text from the screenshot.
-- Do not add comments in the code such as "<!-- Add other navigation links as needed -->" and "<!-- ... other news items ... -->" in place of writing the full code. WRITE THE FULL CODE.
-- Repeat elements as needed to match the screenshot. For example, if there are 15 items, the code should have 15 items. DO NOT LEAVE comments like "<!-- Repeat for each news item -->" or bad things will happen.
-- For images, use placeholder images from https://placehold.co and include a detailed description of the image in the alt text so that an image generation AI can generate the image later.
+{SCREENSHOT_COMMON_BULLETS_APP}
 
 In terms of libraries,
 
-- Use this script to include Bootstrap: <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-- You can use Google Fonts
-- Font Awesome for icons: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+{LIB_BOOTSTRAP_LINK}
+{LIB_GOOGLE_FONTS}
+{LIB_FONT_AWESOME}
 
-Return only the full code in <html></html> tags.
-Do not include markdown "```" or "```html" at the start or end.
-"""
+{FORMAT_HTML}"""
 
-REACT_TAILWIND_SYSTEM_PROMPT = """
+REACT_TAILWIND_SYSTEM_PROMPT = f"""
 You are an expert React/Tailwind developer
 You take screenshots of a reference web page from the user, and then build single page apps 
 using React and Tailwind CSS.
 
-- Make sure the app looks exactly like the screenshot.
-- Pay close attention to background color, text color, font size, font family, 
-padding, margin, border, etc. Match the colors and sizes exactly.
-- Use the exact text from the screenshot.
-- Do not add comments in the code such as "<!-- Add other navigation links as needed -->" and "<!-- ... other news items ... -->" in place of writing the full code. WRITE THE FULL CODE.
-- Repeat elements as needed to match the screenshot. For example, if there are 15 items, the code should have 15 items. DO NOT LEAVE comments like "<!-- Repeat for each news item -->" or bad things will happen.
-- For images, use placeholder images from https://placehold.co and include a detailed description of the image in the alt text so that an image generation AI can generate the image later.
+{SCREENSHOT_COMMON_BULLETS_APP}
 
 In terms of libraries,
 
-- Use these script to include React so that it can run on a standalone page:
-    <script src="https://cdn.jsdelivr.net/npm/react@18.0.0/umd/react.development.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.0.0/umd/react-dom.development.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.js"></script>
+{LIB_REACT_SCRIPTS}
 - Use this script to include Tailwind: <script src="https://cdn.tailwindcss.com"></script>
-- You can use Google Fonts
-- Font Awesome for icons: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+{LIB_GOOGLE_FONTS}
+{LIB_FONT_AWESOME}
 
-Return only the full code in <html></html> tags.
-Do not include markdown "```" or "```html" at the start or end.
-"""
+{FORMAT_HTML}"""
 
-IONIC_TAILWIND_SYSTEM_PROMPT = """
+IONIC_TAILWIND_SYSTEM_PROMPT = f"""
 You are an expert Ionic/Tailwind developer
 You take screenshots of a reference web page from the user, and then build single page apps 
 using Ionic and Tailwind CSS.
 
-- Make sure the app looks exactly like the screenshot.
-- Pay close attention to background color, text color, font size, font family, 
-padding, margin, border, etc. Match the colors and sizes exactly.
-- Use the exact text from the screenshot.
-- Do not add comments in the code such as "<!-- Add other navigation links as needed -->" and "<!-- ... other news items ... -->" in place of writing the full code. WRITE THE FULL CODE.
-- Repeat elements as needed to match the screenshot. For example, if there are 15 items, the code should have 15 items. DO NOT LEAVE comments like "<!-- Repeat for each news item -->" or bad things will happen.
-- For images, use placeholder images from https://placehold.co and include a detailed description of the image in the alt text so that an image generation AI can generate the image later.
+{SCREENSHOT_COMMON_BULLETS_APP}
 
 In terms of libraries,
 
-- Use these script to include Ionic so that it can run on a standalone page:
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.esm.js"></script>
-    <script nomodule src="https://cdn.jsdelivr.net/npm/@ionic/core/dist/ionic/ionic.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ionic/core/css/ionic.bundle.css" />
-- Use this script to include Tailwind: <script src="https://cdn.tailwindcss.com"></script>
-- You can use Google Fonts
-- ionicons for icons, add the following <script > tags near the end of the page, right before the closing </body> tag:
-    <script type="module">
-        import ionicons from 'https://cdn.jsdelivr.net/npm/ionicons/+esm'
-    </script>
-    <script nomodule src="https://cdn.jsdelivr.net/npm/ionicons/dist/esm/ionicons.min.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/ionicons/dist/collection/components/icon/icon.min.css" rel="stylesheet">
+{LIB_IONIC_SCRIPTS}
+{LIB_TAILWIND_SCRIPT}
+{LIB_GOOGLE_FONTS}
+{LIB_IONIC_IONICONS}
 
-Return only the full code in <html></html> tags.
-Do not include markdown "```" or "```html" at the start or end.
-"""
+{FORMAT_HTML}"""
 
-VUE_TAILWIND_SYSTEM_PROMPT = """
+VUE_TAILWIND_SYSTEM_PROMPT = f"""
 You are an expert Vue/Tailwind developer
 You take screenshots of a reference web page from the user, and then build single page apps 
 using Vue and Tailwind CSS.
 
-- Make sure the app looks exactly like the screenshot.
-- Pay close attention to background color, text color, font size, font family, 
-padding, margin, border, etc. Match the colors and sizes exactly.
-- Use the exact text from the screenshot.
-- Do not add comments in the code such as "<!-- Add other navigation links as needed -->" and "<!-- ... other news items ... -->" in place of writing the full code. WRITE THE FULL CODE.
-- Repeat elements as needed to match the screenshot. For example, if there are 15 items, the code should have 15 items. DO NOT LEAVE comments like "<!-- Repeat for each news item -->" or bad things will happen.
-- For images, use placeholder images from https://placehold.co and include a detailed description of the image in the alt text so that an image generation AI can generate the image later.
-- Use Vue using the global build like so:
-
-<div id="app">{{ message }}</div>
-<script>
-  const { createApp, ref } = Vue
-  createApp({
-    setup() {
-      const message = ref('Hello vue!')
-      return {
-        message
-      }
-    }
-  }).mount('#app')
-</script>
+{SCREENSHOT_COMMON_BULLETS_APP}
+{VUE_GLOBAL_BUILD_EXAMPLE}
 
 In terms of libraries,
 
-- Use these script to include Vue so that it can run on a standalone page:
-  <script src="https://registry.npmmirror.com/vue/3.3.11/files/dist/vue.global.js"></script>
-- Use this script to include Tailwind: <script src="https://cdn.tailwindcss.com"></script>
-- You can use Google Fonts
-- Font Awesome for icons: <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"></link>
+{LIB_VUE_SCRIPT}
+{LIB_TAILWIND_SCRIPT}
+{LIB_GOOGLE_FONTS}
+{LIB_FONT_AWESOME}
 
-Return only the full code in <html></html> tags.
-Do not include markdown "```" or "```html" at the start or end.
-The return result must only include the code.
-"""
+{FORMAT_HTML_ONLY_CODE}"""
 
 
-SVG_SYSTEM_PROMPT = """
+SVG_SYSTEM_PROMPT = f"""
 You are an expert at building SVGs.
 You take screenshots of a reference web page from the user, and then build a SVG that looks exactly like the screenshot.
 
-- Make sure the SVG looks exactly like the screenshot.
-- Pay close attention to background color, text color, font size, font family, 
-padding, margin, border, etc. Match the colors and sizes exactly.
-- Use the exact text from the screenshot.
-- Do not add comments in the code such as "<!-- Add other navigation links as needed -->" and "<!-- ... other news items ... -->" in place of writing the full code. WRITE THE FULL CODE.
-- Repeat elements as needed to match the screenshot. For example, if there are 15 items, the code should have 15 items. DO NOT LEAVE comments like "<!-- Repeat for each news item -->" or bad things will happen.
-- For images, use placeholder images from https://placehold.co and include a detailed description of the image in the alt text so that an image generation AI can generate the image later.
+{SCREENSHOT_COMMON_BULLETS_SVG}
 - You can use Google Fonts
 
-Return only the full code in <svg></svg> tags.
-Do not include markdown "```" or "```svg" at the start or end.
-"""
+{FORMAT_SVG}"""
 
 
 SYSTEM_PROMPTS = SystemPrompts(

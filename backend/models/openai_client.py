@@ -3,6 +3,7 @@ from typing import Awaitable, Callable, List
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam, ChatCompletionChunk
 from llm import Completion
+from models.registry import ModelRegistry
 
 
 async def stream_openai_response(
@@ -16,56 +17,23 @@ async def stream_openai_response(
     client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     # Base parameters
-    params = {
-        "model": model_name,
-        "messages": messages,
-        "timeout": 600,
-    }
+    params = {"model": model_name, "messages": messages, "timeout": 600}
 
-    # O1 doesn't support streaming or temperature.
-    # GPT-5 only supports the default temperature (1).
-    if model_name not in [
-        "o1-2024-12-17",
-        "o4-mini-2025-04-16",
-        "o3-2025-04-16",
-    ]:
+    llm = ModelRegistry.from_name(model_name)
+    cfg = ModelRegistry.openai_params(llm)
+
+    if cfg.supports_streaming:
         params["stream"] = True
-        if model_name in ["gpt-5", "gpt-5-turbo"]:
-            params["temperature"] = 1
-        else:
-            params["temperature"] = 0
+    if cfg.supports_temperature and cfg.temperature is not None:
+        params["temperature"] = cfg.temperature
+    if cfg.max_tokens is not None:
+        params["max_tokens"] = cfg.max_tokens
+    if cfg.max_completion_tokens is not None:
+        params["max_completion_tokens"] = cfg.max_completion_tokens
+    if cfg.reasoning_effort is not None:
+        params["reasoning_effort"] = cfg.reasoning_effort
 
-    # GPT-5 series - uses max_completion_tokens instead of max_tokens
-    if model_name in ["gpt-5", "gpt-5-turbo"]:
-        params["stream"] = True
-        params["max_completion_tokens"] = 32768
-    
-    # 4.1 series
-    if model_name in [
-        "gpt-4.1-2025-04-14",
-        "gpt-4.1-mini-2025-04-14",
-        "gpt-4.1-nano-2025-04-14",
-    ]:
-        params["temperature"] = 0
-        params["stream"] = True
-        params["max_tokens"] = 20000
-
-    if model_name == "gpt-4o-2024-05-13":
-        params["max_tokens"] = 4096
-
-    if model_name == "gpt-4o-2024-11-20":
-        params["max_tokens"] = 16384
-
-    if model_name == "o1-2024-12-17":
-        params["max_completion_tokens"] = 20000
-
-    if model_name in ["o4-mini-2025-04-16", "o3-2025-04-16"]:
-        params["max_completion_tokens"] = 20000
-        params["stream"] = True
-        params["reasoning_effort"] = "high"
-
-    # O1 doesn't support streaming
-    if model_name == "o1-2024-12-17":
+    if not cfg.supports_streaming:
         response = await client.chat.completions.create(**params)  # type: ignore
         full_response = response.choices[0].message.content  # type: ignore
     else:

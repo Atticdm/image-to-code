@@ -1,6 +1,4 @@
 import puppeteer, { Browser, Page, ElementHandle } from "puppeteer";
-import { Stack } from "../lib/stacks";
-import { CodeGenerationModel } from "../lib/models";
 
 const TESTS_ROOT_PATH = process.env.TEST_ROOT_PATH;
 
@@ -19,13 +17,8 @@ describe.skip("e2e tests", () => {
   const DEBUG = true;
   const IS_HEADLESS = true;
 
-  const stacks = Object.values(Stack).slice(0, DEBUG ? 1 : undefined);
-  const models = DEBUG
-    ? [
-        CodeGenerationModel.GPT_4O_2024_05_13,
-        // CodeGenerationModel.CLAUDE_4_5_SONNET_2025_09_29,
-      ]
-    : Object.values(CodeGenerationModel);
+  const stacks = (["html_tailwind"] as string[]).slice(0, DEBUG ? 1 : undefined);
+  const models = DEBUG ? (["gpt-5"] as string[]) : (["gpt-5"] as string[]);
 
   beforeAll(async () => {
     browser = await puppeteer.launch({ headless: IS_HEADLESS });

@@ -10,8 +10,6 @@ import TermsOfServiceDialog from "./components/TermsOfServiceDialog";
 import { USER_CLOSE_WEB_SOCKET_CODE } from "./constants";
 import { extractHistory } from "./components/history/utils";
 import toast from "react-hot-toast";
-import { Stack } from "./lib/stacks";
-import { CodeGenerationModel } from "./lib/models";
 import useBrowserTabIndicator from "./hooks/useBrowserTabIndicator";
 import { useAppStore } from "./store/app-store";
 import { useProjectStore } from "./store/project-store";
@@ -21,6 +19,7 @@ import StartPane from "./components/start-pane/StartPane";
 import { Commit } from "./components/commits/types";
 import { createCommit } from "./components/commits/utils";
 import { GitHubLogoIcon } from "@radix-ui/react-icons";
+import { useRegistryStore } from "./store/registry-store";
 
 function App() {
   const {
@@ -41,6 +40,7 @@ function App() {
     setHead,
     appendCommitCode,
     setCommitCode,
+    updateSelectedVariantIndex,
     resetCommits,
     resetHead,
     updateVariantStatus,
@@ -70,27 +70,59 @@ function App() {
       screenshotOneApiKey: null,
       isImageGenerationEnabled: true,
       editorTheme: EditorTheme.COBALT,
-      generatedCodeConfig: Stack.HTML_TAILWIND,
-      codeGenerationModel: CodeGenerationModel.GPT_5,
-      analysisModel: CodeGenerationModel.CLAUDE_4_5_OPUS_2025_11_01, // Default analysis model
+      generatedCodeConfig: "html_tailwind",
+      codeGenerationModel: "gpt-5",
+      analysisModel: "claude-opus-4-5-20251101", // Default analysis model
       isTermOfServiceAccepted: false,
     },
     "setting"
   );
 
   const wsRef = useRef<WebSocket>(null);
+  const requestByCommitHashRef = useRef<Record<string, CodeGenerationParams>>({});
+  const { registry, loadRegistry } = useRegistryStore();
 
   const showSelectAndEditFeature =
-    settings.generatedCodeConfig === Stack.HTML_TAILWIND ||
-    settings.generatedCodeConfig === Stack.HTML_CSS;
+    settings.generatedCodeConfig === "html_tailwind" ||
+    settings.generatedCodeConfig === "html_css";
 
   useBrowserTabIndicator(appState === AppState.CODING);
+
+  useEffect(() => {
+    loadRegistry();
+  }, [loadRegistry]);
+
+  useEffect(() => {
+    if (!registry) return;
+
+    // If persisted settings contain values that the backend no longer offers, reset to defaults.
+    const modelIds = new Set(registry.models.map((m) => m.id));
+    const stackIds = new Set(registry.stacks.map((s) => s.id));
+
+    setSettings((prev) => {
+      const next = { ...prev };
+
+      if (!next.generatedCodeConfig || !stackIds.has(next.generatedCodeConfig)) {
+        next.generatedCodeConfig =
+          (registry.defaults.generatedCodeConfig as string) || "html_tailwind";
+      }
+      if (!next.codeGenerationModel || !modelIds.has(next.codeGenerationModel)) {
+        next.codeGenerationModel =
+          (registry.defaults.codeGenerationModel as string) || "gpt-5";
+      }
+      if (next.analysisModel && !modelIds.has(next.analysisModel)) {
+        next.analysisModel = registry.defaults.analysisModel as string;
+      }
+
+      return next;
+    });
+  }, [registry, setSettings]);
 
   useEffect(() => {
     if (!settings.generatedCodeConfig) {
       setSettings((prev) => ({
         ...prev,
-        generatedCodeConfig: Stack.HTML_TAILWIND,
+        generatedCodeConfig: "html_tailwind",
       }));
     }
   }, [settings.generatedCodeConfig, setSettings]);
@@ -109,15 +141,7 @@ function App() {
   };
 
   const regenerate = () => {
-    if (head === null) {
-      toast.error("No current version set. Please contact support.");
-      throw new Error("Regenerate called with no head");
-    }
-    const currentCommit = commits[head];
-    if (currentCommit.type !== "ai_create") {
-      toast.error("Only the first version can be regenerated.");
-      return;
-    }
+    // Regenerate always reruns the initial create flow and resets state.
     if (inputMode === "image" || inputMode === "video") {
       doCreate(referenceImages, inputMode);
     } else {
@@ -149,7 +173,7 @@ function App() {
     setAppState(AppState.CODING);
     const updatedParams = { ...params, ...settings };
     const baseCommitObject = {
-      variants: Array(4).fill(null).map(() => ({ code: "" })),
+      variants: Array(1).fill(null).map(() => ({ code: "" })),
     };
     const commitInputObject =
       params.generationType === "create"
@@ -171,6 +195,7 @@ function App() {
     const commit = createCommit(commitInputObject);
     addCommit(commit);
     setHead(commit.hash);
+    requestByCommitHashRef.current[commit.hash] = params;
 
     generateCode(wsRef, updatedParams, {
       onChange: (token, variantIndex) => {
@@ -192,6 +217,61 @@ function App() {
       },
       onCancel: () => {
         cancelCodeGenerationAndReset(commit);
+      },
+      onComplete: () => {
+        setAppState(AppState.CODE_READY);
+      },
+    });
+  }
+
+  function generateAnotherOption() {
+    if (appState === AppState.CODING) return;
+    if (head === null) {
+      toast.error("Nothing to regenerate yet.");
+      return;
+    }
+
+    const commit = commits[head];
+    if (!commit) return;
+
+    const baseParams = requestByCommitHashRef.current[head];
+    if (!baseParams) {
+      toast.error("Missing generation context for this result.");
+      return;
+    }
+
+    const maxOptions = 4;
+    if (commit.variants.length >= maxOptions) {
+      toast.error(`Max options reached (${maxOptions}).`);
+      return;
+    }
+
+    const targetIndex = commit.variants.length;
+    resizeVariants(head, targetIndex + 1);
+    updateSelectedVariantIndex(head, targetIndex);
+    setAppState(AppState.CODING);
+
+    const updatedParams = { ...baseParams, ...settings };
+    generateCode(wsRef, updatedParams, {
+      onChange: (token) => {
+        appendCommitCode(head, targetIndex, token);
+      },
+      onSetCode: (code) => {
+        setCommitCode(head, targetIndex, code);
+      },
+      onStatusUpdate: (line) => appendExecutionConsole(targetIndex, line),
+      onVariantComplete: () => {
+        updateVariantStatus(head, targetIndex, "complete");
+      },
+      onVariantError: (_variantIndex, error) => {
+        updateVariantStatus(head, targetIndex, "error", error);
+      },
+      onVariantCount: () => {
+        // Ignore: this call is only for a single additional option.
+      },
+      onCancel: () => {
+        updateVariantStatus(head, targetIndex, "cancelled");
+        setAppState(AppState.CODE_READY);
       },
       onComplete: () => {
         setAppState(AppState.CODE_READY);
@@ -269,11 +349,11 @@ function App() {
     setSettings((s) => ({ ...s, isTermOfServiceAccepted: !open }));
   };
 
-  function setStack(stack: Stack) {
+  function setStack(stack: string) {
     setSettings((prev) => ({ ...prev, generatedCodeConfig: stack }));
   }
 
-  function importFromCode(code: string, stack: Stack) {
+  function importFromCode(code: string, stack: string) {
     reset();
     setIsImportedFromCode(true);
     setStack(stack);
@@ -344,6 +424,7 @@ function App() {
                   doUpdate={doUpdate}
                   regenerate={regenerate}
                   cancelCodeGeneration={cancelCodeGeneration}
+                  generateAnotherOption={generateAnotherOption}
                 />
               </div>
             </aside>

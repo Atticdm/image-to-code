@@ -5,6 +5,7 @@ from openai.types.chat import ChatCompletionMessageParam
 from google import genai
 from google.genai import types
 from llm import Completion, Llm
+from models.registry import ModelRegistry
 
 
 def extract_image_from_messages(
@@ -50,27 +51,24 @@ async def stream_gemini_response(
     client = genai.Client(api_key=api_key)
     full_response = ""
 
-    if model_name == Llm.GEMINI_2_5_FLASH_PREVIEW_05_20.value:
-        # Gemini 2.5 Flash supports thinking budgets
-        config = types.GenerateContentConfig(
-            temperature=0,
-            max_output_tokens=20000,
-            thinking_config=types.ThinkingConfig(
-                thinking_budget=5000, include_thoughts=True
-            ),
+    llm = ModelRegistry.from_name(model_name)
+    cfg = ModelRegistry.gemini_params(llm)
+
+    thinking_config = None
+    if cfg.thinking_budget is not None:
+        thinking_config = types.ThinkingConfig(
+            thinking_budget=cfg.thinking_budget,
+            include_thoughts=cfg.include_thoughts,
         )
-    elif model_name == Llm.GEMINI_3_PRO.value:
-        # Gemini 3 Pro - increased token limit for better quality
-        config = types.GenerateContentConfig(
-            temperature=0,
-            max_output_tokens=32768,
-        )
-    else:
-        # TODO: Fix output tokens here
-        config = types.GenerateContentConfig(
-            temperature=0,
-            max_output_tokens=8000,
-        )
+
+    config_kwargs = {
+        "temperature": cfg.temperature,
+        "max_output_tokens": cfg.max_output_tokens,
+    }
+    if thinking_config is not None:
+        config_kwargs["thinking_config"] = thinking_config
+
+    config = types.GenerateContentConfig(**config_kwargs)
 
     async for chunk in await client.aio.models.generate_content_stream(
         model=model_name,

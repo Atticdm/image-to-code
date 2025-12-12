@@ -3,11 +3,16 @@ from openai.types.chat import ChatCompletionMessageParam, ChatCompletionContentP
 
 from custom_types import InputMode
 from image_generation.core import create_alt_url_mapping
-from prompts.imported_code_prompts import IMPORTED_CODE_SYSTEM_PROMPTS
-from prompts.screenshot_system_prompts import SYSTEM_PROMPTS
-from prompts.text_prompts import SYSTEM_PROMPTS as TEXT_SYSTEM_PROMPTS
+from prompts.registry import (
+    IMPORTED_CODE_SYSTEM_PROMPTS,
+    SCREENSHOT_SYSTEM_PROMPTS,
+    TEXT_SYSTEM_PROMPTS,
+)
 from prompts.types import Stack, PromptContent
 from video.utils import assemble_claude_prompt_video
+
+# Backward-compatible names used throughout the codebase and in tests.
+SYSTEM_PROMPTS = SCREENSHOT_SYSTEM_PROMPTS
 
 
 USER_PROMPT = """

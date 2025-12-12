@@ -6,7 +6,6 @@ import SelectAndEditModeToggleButton from "../select-and-edit/SelectAndEditModeT
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useEffect, useRef, useState, useCallback } from "react";
-import HistoryDisplay from "../history/HistoryDisplay";
 import Variants from "../variants/Variants";
 import UpdateImageUpload, { UpdateImagePreview } from "../UpdateImageUpload";
 import { ReloadIcon, Cross2Icon } from "@radix-ui/react-icons";
@@ -16,6 +15,7 @@ interface SidebarProps {
   doUpdate: (instruction: string) => void;
   regenerate: () => void;
   cancelCodeGeneration: () => void;
+  generateAnotherOption: () => void;
 }
 
 function Sidebar({
@@ -23,6 +23,7 @@ function Sidebar({
   doUpdate,
   regenerate,
   cancelCodeGeneration,
+  generateAnotherOption,
 }: SidebarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -58,6 +59,7 @@ function Sidebar({
   }, [updateImages, setUpdateImages]);
 
   const { inputMode, referenceImages, head, commits } = useProjectStore();
+  const currentCommit = head ? commits[head] : null;
 
   const isSelectedVariantComplete =
     head &&
@@ -75,6 +77,12 @@ function Sidebar({
     head &&
     commits[head] &&
     commits[head].variants[commits[head].selectedVariantIndex].errorMessage;
+
+  const canGenerateAnotherOption =
+    (appState === AppState.CODE_READY || isSelectedVariantComplete) &&
+    !isSelectedVariantError &&
+    Boolean(currentCommit) &&
+    (currentCommit?.variants?.length ?? 0) < 4;
 
   useEffect(() => {
     if (
@@ -121,13 +129,21 @@ function Sidebar({
 
       {/* Variants Selection */}
       <div className="px-4">
+          {(appState === AppState.CODE_READY || isSelectedVariantComplete) && (
+            <Button
+              onClick={generateAnotherOption}
+              variant="secondary"
+              className="w-full mb-3"
+              disabled={!canGenerateAnotherOption}
+              title="Generate one more alternative (runs the model once more)"
+            >
+              Generate another option
+            </Button>
+          )}
           <Variants />
       </div>
 
-      {/* History Feed */}
-      <div className="flex-1 overflow-y-auto min-h-0 px-4">
-        <HistoryDisplay shouldDisableReverts={appState === AppState.CODING} />
-      </div>
+      <div className="flex-1 min-h-0 px-4" />
 
       {/* Generation Controls */}
       {appState === AppState.CODING && !isSelectedVariantComplete && (

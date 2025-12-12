@@ -1,89 +1,86 @@
 import pytest
 from unittest.mock import AsyncMock
-from routes.generate_code import ModelSelectionStage
+
+from pipeline.codegen.stages.model_selection import ModelSelectionStage
+from config import NUM_VARIANTS
 from llm import Llm
 
 
-class TestModelSelectionAllKeys:
-    """Test model selection when all API keys are present."""
+class TestModelSelectionPreference:
+    """Model selection honors user preference with fallbacks."""
 
     def setup_method(self):
-        """Set up test fixtures."""
         mock_throw_error = AsyncMock()
         self.model_selector = ModelSelectionStage(mock_throw_error)
 
     @pytest.mark.asyncio
-    async def test_text_create(self):
-        """Text + Create: GPT-4.1, Claude 3.7, Claude 4, GPT-4.1"""
+    async def test_preferred_openai_used_when_key_present(self):
         models = await self.model_selector.select_models(
             generation_type="create",
             input_mode="text",
             openai_api_key="key",
             anthropic_api_key="key",
             gemini_api_key="key",
+            preferred_model=Llm.GPT_5.value,
         )
-        
-        expected = [
-            Llm.GPT_4_1_2025_04_14,
-            Llm.CLAUDE_3_7_SONNET_2025_02_19,
-            Llm.CLAUDE_4_SONNET_2025_05_14,
-            Llm.GPT_4_1_2025_04_14,  # NUM_VARIANTS=4, cycles back
-        ]
-        assert models == expected
+        assert models == [Llm.GPT_5] * NUM_VARIANTS
 
     @pytest.mark.asyncio
-    async def test_text_update(self):
-        """Text + Update: GPT-4.1, Claude 3.7, Claude 4, GPT-4.1"""
-        models = await self.model_selector.select_models(
-            generation_type="update",
-            input_mode="text",
-            openai_api_key="key",
-            anthropic_api_key="key",
-            gemini_api_key="key",
-        )
-        
-        expected = [
-            Llm.GPT_4_1_2025_04_14,
-            Llm.CLAUDE_3_7_SONNET_2025_02_19,
-            Llm.CLAUDE_4_SONNET_2025_05_14,
-            Llm.GPT_4_1_2025_04_14,  # NUM_VARIANTS=4, cycles back
-        ]
-        assert models == expected
-
-    @pytest.mark.asyncio
-    async def test_image_create(self):
-        """Image + Create: GPT-4.1, Claude 3.7, Gemini 2.0, GPT-4.1"""
+    async def test_preferred_anthropic_used_when_key_present(self):
         models = await self.model_selector.select_models(
             generation_type="create",
             input_mode="image",
             openai_api_key="key",
             anthropic_api_key="key",
             gemini_api_key="key",
+            preferred_model=Llm.CLAUDE_4_5_SONNET_2025_11_01.value,
         )
-        
-        expected = [
-            Llm.GPT_4_1_2025_04_14,
-            Llm.CLAUDE_3_7_SONNET_2025_02_19,
-            Llm.GEMINI_2_0_FLASH,
-            Llm.GPT_4_1_2025_04_14,  # NUM_VARIANTS=4, cycles back
-        ]
-        assert models == expected
+        assert models == [Llm.CLAUDE_4_5_SONNET_2025_11_01] * NUM_VARIANTS
 
     @pytest.mark.asyncio
-    async def test_image_update(self):
-        """Image + Update: GPT-4.1, Claude 3.7, Claude 3.7, GPT-4.1 (no Gemini)"""
+    async def test_preferred_gemini_used_for_image_create(self):
+        models = await self.model_selector.select_models(
+            generation_type="create",
+            input_mode="image",
+            openai_api_key="key",
+            anthropic_api_key="key",
+            gemini_api_key="key",
+            preferred_model=Llm.GEMINI_3_PRO.value,
+        )
+        assert models == [Llm.GEMINI_3_PRO] * NUM_VARIANTS
+
+    @pytest.mark.asyncio
+    async def test_gemini_preference_falls_back_on_update(self):
         models = await self.model_selector.select_models(
             generation_type="update",
             input_mode="image",
             openai_api_key="key",
             anthropic_api_key="key",
             gemini_api_key="key",
+            preferred_model=Llm.GEMINI_3_PRO.value,
         )
-        
-        expected = [
-            Llm.GPT_4_1_2025_04_14,
-            Llm.CLAUDE_3_7_SONNET_2025_02_19,
-            Llm.CLAUDE_3_7_SONNET_2025_02_19,  # Gemini doesn't support update, falls back to Claude
-            Llm.GPT_4_1_2025_04_14,  # NUM_VARIANTS=4, cycles back
-        ]
-        assert models == expected
+        assert models == [Llm.GPT_5] * NUM_VARIANTS
+
+    @pytest.mark.asyncio
+    async def test_openai_preference_falls_back_when_key_missing(self):
+        models = await self.model_selector.select_models(
+            generation_type="create",
+            input_mode="text",
+            openai_api_key=None,
+            anthropic_api_key="key",
+            gemini_api_key="key",
+            preferred_model=Llm.GPT_5.value,
+        )
+        assert models == [Llm.CLAUDE_4_5_OPUS_2025_11_01] * NUM_VARIANTS
+
+    @pytest.mark.asyncio
+    async def test_invalid_preference_uses_default_fallback_order(self):
+        models = await self.model_selector.select_models(
+            generation_type="create",
+            input_mode="text",
+            openai_api_key="key",
+            anthropic_api_key="key",
+            gemini_api_key="key",
+            preferred_model="not-a-real-model",
+        )
+        assert models == [Llm.GPT_5] * NUM_VARIANTS

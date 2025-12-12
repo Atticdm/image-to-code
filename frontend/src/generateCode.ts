@@ -21,7 +21,7 @@ type WebSocketResponse = {
     | "variantError"
     | "variantCount";
   value: string;
-  variantIndex: number;
+  variantIndex?: number;
 };
 
 interface CodeGenerationCallbacks {
@@ -51,23 +51,48 @@ export function generateCode(
   });
 
   ws.addEventListener("message", async (event: MessageEvent) => {
-    const response = JSON.parse(event.data) as WebSocketResponse;
-    if (response.type === "chunk") {
-      callbacks.onChange(response.value, response.variantIndex);
-    } else if (response.type === "status") {
-      callbacks.onStatusUpdate(response.value, response.variantIndex);
-    } else if (response.type === "setCode") {
-      callbacks.onSetCode(response.value, response.variantIndex);
-    } else if (response.type === "variantComplete") {
-      callbacks.onVariantComplete(response.variantIndex);
-    } else if (response.type === "variantError") {
-      callbacks.onVariantError(response.variantIndex, response.value);
-    } else if (response.type === "variantCount") {
-      callbacks.onVariantCount(parseInt(response.value));
-    } else if (response.type === "error") {
-      console.error("Error generating code", response.value);
-      toast.error(response.value);
+    let response: WebSocketResponse;
+    try {
+      response = JSON.parse(event.data) as WebSocketResponse;
+    } catch (e) {
+      console.error("Failed to parse WS message", e);
+      return;
     }
+
+    const handlers: Record<
+      WebSocketResponse["type"],
+      (r: WebSocketResponse) => void
+    > = {
+      chunk: (r) => {
+        if (typeof r.variantIndex !== "number") return;
+        callbacks.onChange(r.value, r.variantIndex);
+      },
+      status: (r) => {
+        if (typeof r.variantIndex !== "number") return;
+        callbacks.onStatusUpdate(r.value, r.variantIndex);
+      },
+      setCode: (r) => {
+        if (typeof r.variantIndex !== "number") return;
+        callbacks.onSetCode(r.value, r.variantIndex);
+      },
+      variantComplete: (r) => {
+        if (typeof r.variantIndex !== "number") return;
+        callbacks.onVariantComplete(r.variantIndex);
+      },
+      variantError: (r) => {
+        if (typeof r.variantIndex !== "number") return;
+        callbacks.onVariantError(r.variantIndex, r.value);
+      },
+      variantCount: (r) => {
+        callbacks.onVariantCount(parseInt(r.value));
+      },
+      error: (r) => {
+        console.error("Error generating code", r.value);
+        toast.error(r.value);
+      },
+    };
+
+    handlers[response.type]?.(response);
   });
 
   ws.addEventListener("close", (event) => {

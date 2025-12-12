@@ -8,6 +8,7 @@ from debug.DebugFileWriter import DebugFileWriter
 from image_processing.utils import process_image
 from utils import pprint_prompt
 from llm import Completion, Llm
+from models.registry import ModelRegistry
 
 
 def convert_openai_messages_to_claude(
@@ -65,13 +66,8 @@ async def stream_claude_response(
     start_time = time.time()
     client = AsyncAnthropic(api_key=api_key)
 
-    # Base parameters
-    max_tokens = 8192
-    temperature = 0.0
-
-    # Claude 3.7 Sonnet can support higher max tokens
-    if model_name == "claude-3-7-sonnet-20250219":
-        max_tokens = 20000
+    llm = ModelRegistry.from_name(model_name)
+    cfg = ModelRegistry.anthropic_params(llm)
 
     # Translate OpenAI messages to Claude messages
 
@@ -80,16 +76,16 @@ async def stream_claude_response(
 
     response = ""
 
-    if (
-        model_name == Llm.CLAUDE_4_SONNET_2025_05_14.value
-        or model_name == Llm.CLAUDE_4_OPUS_2025_05_14.value
-    ):
+    if cfg.use_thinking:
         print(f"Using {model_name} with thinking")
-        # Thinking is not compatible with temperature
+        thinking = {
+            "type": "enabled",
+            "budget_tokens": cfg.thinking_budget_tokens or 10000,
+        }
         async with client.messages.stream(
             model=model_name,
-            thinking={"type": "enabled", "budget_tokens": 10000},
-            max_tokens=30000,
+            thinking=thinking,
+            max_tokens=cfg.max_tokens,
             system=system_prompt,
             messages=claude_messages,  # type: ignore
         ) as stream:
@@ -97,20 +93,17 @@ async def stream_claude_response(
                 if event.type == "content_block_delta":
                     if event.delta.type == "thinking_delta":
                         pass
-                        # print(event.delta.thinking, end="")
                     elif event.delta.type == "text_delta":
                         response += event.delta.text
                         await callback(event.delta.text)
-
     else:
-        # Stream Claude response
         async with client.beta.messages.stream(
             model=model_name,
-            max_tokens=max_tokens,
-            temperature=temperature,
+            max_tokens=cfg.max_tokens,
+            temperature=cfg.temperature,
             system=system_prompt,
             messages=claude_messages,  # type: ignore
-            betas=["output-128k-2025-02-19"],
+            betas=list(cfg.betas),
         ) as stream:
             async for text in stream.text_stream:
                 response += text

@@ -1,5 +1,11 @@
 {
   "python.analysis.typeCheckingMode": "strict",
   "python.analysis.extraPaths": ["./backend"],
-  "python.autoComplete.extraPaths": ["./backend"]
+  "python.autoComplete.extraPaths": [
+    "./backend"
+  ],
+  "cursorpyright.analysis.extraPaths": [
+    "./backend"
+  ],
+  "cursorpyright.analysis.typeCheckingMode": "strict"
 }

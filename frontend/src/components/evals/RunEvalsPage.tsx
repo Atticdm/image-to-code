@@ -6,8 +6,8 @@ import InputFileSelector from "./InputFileSelector";
 import EvalNavigation from "./EvalNavigation";
 
 interface ModelResponse {
-  models: string[];
-  stacks: string[];
+  models: { id: string; name?: string }[];
+  stacks: { id: string; label?: string }[];
 }
 
 function RunEvalsPage() {
@@ -23,8 +23,8 @@ function RunEvalsPage() {
     const fetchModels = async () => {
       const response = await fetch(`${HTTP_BACKEND_URL}/models`);
       const data: ModelResponse = await response.json();
-      setModels(data.models);
-      setStacks(data.stacks);
+      setModels(data.models.map((m) => m.id));
+      setStacks(data.stacks.map((s) => s.id));
     };
     fetchModels();
   }, []);

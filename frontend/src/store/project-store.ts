@@ -94,10 +94,8 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   appendCommitCode: (hash: CommitHash, numVariant: number, code: string) =>
     set((state) => {
       const commit = state.commits[hash];
-      // Don't update if the commit is already committed
-      if (commit.isCommitted) {
-        throw new Error("Attempted to append code to a committed commit");
-      }
+      // Ignore late WS chunks (race-safe).
+      if (!commit || commit.isCommitted) return state;
       return {
         commits: {
           ...state.commits,
@@ -115,10 +113,8 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   setCommitCode: (hash: CommitHash, numVariant: number, code: string) =>
     set((state) => {
       const commit = state.commits[hash];
-      // Don't update if the commit is already committed
-      if (commit.isCommitted) {
-        throw new Error("Attempted to set code of a committed commit");
-      }
+      // Ignore late WS updates (race-safe).
+      if (!commit || commit.isCommitted) return state;
       return {
         commits: {
           ...state.commits,
@@ -134,12 +130,7 @@ export const useProjectStore = create<ProjectStore>((set) => ({
   updateSelectedVariantIndex: (hash: CommitHash, index: number) =>
     set((state) => {
       const commit = state.commits[hash];
-      // Don't update if the commit is already committed
-      if (commit.isCommitted) {
-        throw new Error(
-          "Attempted to update selected variant index of a committed commit"
-        );
-      }
+      if (!commit || commit.isCommitted) return state;
 
       // Just update the selected variant index without canceling other variants
       // This allows users to switch between variants even while they're still generating

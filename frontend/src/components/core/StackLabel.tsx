@@ -1,19 +1,22 @@
 import React from "react";
-import { Stack, STACK_DESCRIPTIONS } from "../../lib/stacks";
+import { getStackComponentsFromRegistry } from "../../lib/backendRegistry";
+import { useRegistryStore } from "../../store/registry-store";
 
 interface StackLabelProps {
-  stack: Stack;
+  stack: string;
 }
 
 const StackLabel: React.FC<StackLabelProps> = ({ stack }) => {
-  const stackComponents = STACK_DESCRIPTIONS[stack].components;
+  const { registry } = useRegistryStore();
+  const stackComponents = getStackComponentsFromRegistry(registry, stack);
+  const displayParts = stackComponents.length ? stackComponents : [stack];
 
   return (
     <div>
-      {stackComponents.map((component, index) => (
+      {displayParts.map((component, index) => (
         <React.Fragment key={index}>
           <span className="font-semibold">{component}</span>
-          {index < stackComponents.length - 1 && " + "}
+          {index < displayParts.length - 1 && " + "}
         </React.Fragment>
       ))}
     </div>

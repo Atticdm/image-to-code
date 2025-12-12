@@ -3,20 +3,30 @@ import ImageUpload from "../ImageUpload";
 import { UrlInputSection } from "../UrlInputSection";
 import ImportCodeSection from "../ImportCodeSection";
 import { Settings } from "../../types";
-import { Stack } from "../../lib/stacks";
 import { Badge } from "../ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "../ui/select";
-import { CodeGenerationModel, CODE_GENERATION_MODEL_DESCRIPTIONS } from "../../lib/models";
 import { Label } from "../ui/label";
+import { useRegistryStore } from "../../store/registry-store";
+import { getModelNameFromRegistry } from "../../lib/backendRegistry";
 
 interface Props {
   doCreate: (images: string[], inputMode: "image" | "video") => void;
-  importFromCode: (code: string, stack: Stack) => void;
+  importFromCode: (code: string, stack: string) => void;
   settings: Settings;
   setSettings: React.Dispatch<React.SetStateAction<Settings>>;
 }
 
 const StartPane: React.FC<Props> = ({ doCreate, importFromCode, settings, setSettings }) => {
+  const { registry } = useRegistryStore();
+  const codeModelOptions =
+    registry?.recommended?.codeGenerationModels?.length
+      ? registry.recommended.codeGenerationModels
+      : registry?.models?.map((m) => m.id) ?? [];
+  const analysisModelOptions =
+    registry?.recommended?.analysisModels?.length
+      ? registry.recommended.analysisModels
+      : registry?.models?.map((m) => m.id) ?? [];
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4 animate-in fade-in duration-700">
       <div className="max-w-3xl w-full flex flex-col items-center gap-y-8">
@@ -41,20 +51,22 @@ const StartPane: React.FC<Props> = ({ doCreate, importFromCode, settings, setSet
               <Label className="text-sm text-zinc-400">Code Generation Model</Label>
               <Select
                 value={settings.codeGenerationModel}
+                disabled={codeModelOptions.length === 0}
                 onValueChange={(value) =>
                   setSettings((s) => ({
                     ...s,
-                    codeGenerationModel: value as CodeGenerationModel,
+                    codeGenerationModel: value,
                   }))
                 }
               >
                 <SelectTrigger className="w-full bg-zinc-900/50 border-zinc-700 hover:border-zinc-600 transition-colors">
-                  {CODE_GENERATION_MODEL_DESCRIPTIONS[settings.codeGenerationModel]?.name || "Select model"}
+                  {getModelNameFromRegistry(registry, settings.codeGenerationModel) ||
+                    "Select model"}
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.values(CodeGenerationModel).map((model) => (
+                  {codeModelOptions.map((model) => (
                     <SelectItem key={model} value={model}>
-                      {CODE_GENERATION_MODEL_DESCRIPTIONS[model]?.name ?? model}
+                      {getModelNameFromRegistry(registry, model)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -69,23 +81,24 @@ const StartPane: React.FC<Props> = ({ doCreate, importFromCode, settings, setSet
               </Label>
               <Select
                 value={settings.analysisModel || "none"}
+                disabled={analysisModelOptions.length === 0}
                 onValueChange={(value) =>
                   setSettings((s) => ({
                     ...s,
-                    analysisModel: value && value !== "none" ? (value as CodeGenerationModel) : null,
+                    analysisModel: value && value !== "none" ? value : null,
                   }))
                 }
               >
                 <SelectTrigger className="w-full bg-zinc-900/50 border-zinc-700 hover:border-zinc-600 transition-colors">
-                  {settings.analysisModel && CODE_GENERATION_MODEL_DESCRIPTIONS[settings.analysisModel]
-                    ? CODE_GENERATION_MODEL_DESCRIPTIONS[settings.analysisModel].name
+                  {settings.analysisModel
+                    ? getModelNameFromRegistry(registry, settings.analysisModel)
                     : "Standard (no extraction)"}
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Standard (no extraction)</SelectItem>
-                  {Object.values(CodeGenerationModel).map((model) => (
+                  {analysisModelOptions.map((model) => (
                     <SelectItem key={model} value={model}>
-                      {CODE_GENERATION_MODEL_DESCRIPTIONS[model]?.name ?? model}
+                      {getModelNameFromRegistry(registry, model)}
                     </SelectItem>
                   ))}
                 </SelectContent>

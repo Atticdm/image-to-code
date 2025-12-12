@@ -12,15 +12,14 @@ import {
 import { Textarea } from "./ui/textarea";
 import OutputSettingsSection from "./settings/OutputSettingsSection";
 import toast from "react-hot-toast";
-import { Stack } from "../lib/stacks";
 
 interface Props {
-  importFromCode: (code: string, stack: Stack) => void;
+  importFromCode: (code: string, stack: string) => void;
 }
 
 function ImportCodeSection({ importFromCode }: Props) {
   const [code, setCode] = useState("");
-  const [stack, setStack] = useState<Stack | undefined>(undefined);
+  const [stack, setStack] = useState<string | undefined>(undefined);
 
   const doImport = () => {
     if (code === "") {
@@ -58,7 +57,7 @@ function ImportCodeSection({ importFromCode }: Props) {
 
         <OutputSettingsSection
           stack={stack}
-          setStack={(config: Stack) => setStack(config)}
+          setStack={(config: string) => setStack(config)}
           label="Stack:"
           shouldDisableUpdates={false}
         />
