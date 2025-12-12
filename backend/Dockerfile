@@ -16,8 +16,8 @@ COPY poetry.lock pyproject.toml /app/
 # Disable the creation of virtual environments
 RUN poetry config virtualenvs.create false
 
-# Ensure lockfile is compatible/synced with pyproject.toml (no version upgrades).
-RUN poetry lock --no-update
+# Ensure lockfile is compatible/synced with pyproject.toml.
+RUN poetry lock
 
 # Install dependencies
 RUN poetry install --only main --no-interaction --no-ansi
